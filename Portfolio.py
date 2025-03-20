@@ -19,6 +19,7 @@ class Portfolio:
     def initialize_weights(self):
         # Total weight reserved for minimum allocations
         total_min = self.n_assets * self.min_weight
+
         # Remaining weight to distribute
         free_weight = 1.0 - total_min
         

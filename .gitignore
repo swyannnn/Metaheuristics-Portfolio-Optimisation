@@ -5,4 +5,5 @@ tmp.ipynb
 __pycache__
 *.pyc
 *.pyo
-*.pyd     
+*.pyd 
+/outputs    

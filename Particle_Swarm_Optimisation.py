@@ -128,6 +128,10 @@ class Particle_Swarm_Optimisation:
 
             # Update the particle's position
             self.swarm[i].set_weights(new_position)
+            # Recalculate portfolio metrics after weight update.
+            self.swarm[i].set_expected_return()
+            self.swarm[i].set_volatility()
+            self.swarm[i].set_sharpe_ratio()
 
         return None
 
@@ -152,6 +156,7 @@ class Particle_Swarm_Optimisation:
 
             # record best and mean fitness.
             best_fitness = self.swarm_df['fitness'].max()
+
             mean_fitness = self.swarm_df['fitness'].mean()
             self.swarm_fitness.append(best_fitness)
             self.swarm_mean.append(mean_fitness)

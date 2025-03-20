@@ -1,10 +1,8 @@
 tickers: ['AAPL', 'AMZN', 'GOOG', 'META', "NFLX"]
 stock_data_path: "./data/"
 max_total_iterations: 100
-max_iterations: 1000
-max_total_runtime: 300
-max_runtime: 60
-risk_free_rate: 0.02
+max_iterations: 100
+risk_free_rate: 0.8877 # got this value by averaging the risk-free rates of the time period 2014.01.01 to 2019.12.31, refer to https://fred.stlouisfed.org/series/DTB3
 min_weight: 0.01
 metric: 'sharpe_ratio' # 'sharpe_ratio', 'sortino_ratio', 'max_drawdown', 'annualized_return', 'annualized_volatility'
 
@@ -17,23 +15,17 @@ Simulated_Annealing:
   social: 1.5
   schedule: 'linear' # 'linear', 'geometric', 'lundy_mees'
 
-  max_rejections: 250
-  max_acceptances: 15
-  max_plateau_rejections: 50
-  max_plateau_acceptances: 10
-  max_total_rejections: 1000
-  max_total_acceptances: 100
-  max_plateau_total_rejections: 500
-  max_plateau_total_acceptances: 50
-  max_plateau_iterations: 100
-  max_plateau_runtime: 10
-
 Particle_Swarm_Optimization:
   num_particles: 10
 
 Genetic_Algorithm:
   population_size: 10
-  mutation_rate: 0.1
+  selection_method: 'tournament' # 'tournament', 'roulette_wheel', 'rank_based'
+  tournament_size: 3
+  crossover_method: 'uniform' # 'uniform', 'one_point', 'two_point'
+  crossover_rate: 0.8
+  mutation_rate: 0.01 # should be small, better 1/self.stock_num
+  replacement_method: 'elitism' # 'elitism', 'generational'
 
 Ant_Colony_Optimization:
   num_ants: 10

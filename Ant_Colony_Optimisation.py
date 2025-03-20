@@ -4,7 +4,7 @@ import numpy as np
 from Portfolio import Portfolio
 
 class Ant_Colony_Optimisation:
-    def __init__(self, returns_df, corr_matrix, risk_free, size, evaporation_rate=0.1, alpha=1, beta=2):
+    def __init__(self, returns_df, corr_matrix, risk_free, min_weight, size, evaporation_rate=0.1, alpha=1, beta=2):
         """
         :param returns_df: DataFrame of returns, used to compute expected returns etc.
         :param corr_matrix: Correlation matrix (or can be combined with std to form covariance info)
@@ -17,6 +17,7 @@ class Ant_Colony_Optimisation:
         self.returns = returns_df
         self.corr = corr_matrix
         self.risk_free = risk_free
+        self.min_weight = min_weight
         self.size = size
         self.evaporation_rate = evaporation_rate
         self.alpha = alpha
@@ -24,7 +25,7 @@ class Ant_Colony_Optimisation:
         
         # Initialize pheromone vector for each asset.
         # We assume there are n_assets; initial pheromone can be uniform.
-        sample_portfolio = Portfolio(self.returns, self.corr, self.risk_free)
+        sample_portfolio = Portfolio(self.returns, self.corr, self.risk_free, self.min_weight)
         self.n_assets = len(sample_portfolio.get_weights())
         self.pheromone = np.ones(self.n_assets)  # one pheromone level per asset
         
@@ -37,13 +38,31 @@ class Ant_Colony_Optimisation:
         return None
     
     def run(self, iterations, variable):
-        # Run the ACO for a number of iterations.
+        # Initialize the colony for the first generation
         self.initialize()
         for i in range(iterations):
-            self.construct_solutions()    # each ant constructs a new portfolio
-            self.set_fitness(variable)      # evaluate fitness for each portfolio
-            self.update_pheromone()         # update pheromone based on quality of solutions
-            self.pass_generation(variable)  # store generation data and prepare for next iteration
+            new_colony = []
+            # For each ant in the colony, construct a new solution and update the ant.
+            for _ in range(self.size):
+                weights = self.construct_solution()  # generate new weights based on pheromone & heuristic
+                p = Portfolio(self.returns, self.corr, self.risk_free, self.min_weight)
+                p.set_weights(weights)
+                # Optionally, recalc portfolio metrics after updating weights if needed:
+                p.set_expected_return()
+                p.set_volatility()
+                p.set_sharpe_ratio()
+                new_colony.append(p)
+            # Replace the old colony with the new one
+            self.colony = new_colony
+            
+            # Evaluate fitness for the new colony
+            self.set_fitness(variable)
+            
+            # Update pheromone based on new solutions' fitness
+            self.update_pheromone()
+            
+            # Record generation information
+            self.pass_generation(variable)
         return None
     
     def initialize(self):
@@ -53,7 +72,7 @@ class Ant_Colony_Optimisation:
         for i in range(self.size):
             # Instead of completely random weights, we can use a probabilistic approach guided by pheromones.
             weights = self.construct_solution()
-            p = Portfolio(self.returns, self.corr, self.risk_free)
+            p = Portfolio(self.returns, self.corr, self.risk_free, self.min_weight)
             p.set_weights(weights)
             self.colony.append(p)
         self.colony_df = self.to_table(self.colony)
@@ -68,7 +87,7 @@ class Ant_Colony_Optimisation:
         For simplicity, here we assume the heuristic is based on the asset's average return.
         """
         # Get heuristic desirability from returns (assuming self.returns has a row 'mean')
-        heuristics = self.returns.loc['mean'].values
+        heuristics = self.returns.describe().loc['mean'].values
         # Normalize heuristics to avoid scale issues:
         if heuristics.sum() != 0:
             heuristics = heuristics / heuristics.sum()
@@ -103,7 +122,10 @@ class Ant_Colony_Optimisation:
         # Build cumulative selection probability for reference (not always used in ACO, but useful for analysis)
         self.colony_df['selection_prob'] = self.colony_df['fitness']
         for i in range(1, len(self.colony_df)):
-            self.colony_df['selection_prob'].iloc[i] = self.colony_df['selection_prob'].iloc[i-1] + self.colony_df['fitness'].iloc[i]
+            self.colony_df.loc[self.colony_df.index[i], 'selection_prob'] = (
+                self.colony_df.loc[self.colony_df.index[i-1], 'selection_prob'] +
+                self.colony_df.loc[self.colony_df.index[i], 'fitness']
+            )
         return self.colony_df
     
     def update_pheromone(self):

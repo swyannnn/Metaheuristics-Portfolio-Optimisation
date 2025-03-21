@@ -66,7 +66,7 @@ def main(config):
     ga_config = config.get("Genetic_Algorithm", {})
     GA = Genetic_algorithm(monthly_returns, corr_matrix, risk_free_rate, min_weight, ga_config)
     GA.run(max_iterations, metric)
-    best_ga = GA.get_population(metric)
+    best_ga = GA.overall_best
     print("Genetic Algorithm Best Portfolio:")
     print("Weights:", best_ga.get_weights())
     print(metric, "=", getattr(best_ga, metric))

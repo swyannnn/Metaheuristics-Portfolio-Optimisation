@@ -17,10 +17,12 @@ class Genetic_algorithm:
         self.mutation_rate = ga_config.get("mutation_rate", 0.1)
         self.replacement_method = ga_config.get("replacement_method", 'elitism')
         self.overall_best = None
+        self.overall_best_metric = None
         return None
     
     def run(self, max_generations, variable):
         self.initialize()
+
         for i in range(max_generations):
             self.set_fitness(variable)
             self.selection()
@@ -39,10 +41,17 @@ class Genetic_algorithm:
                 self.overall_best = current_best
                 self.overall_best_metric = current_metric
             else:
-                if current_metric > self.overall_best_metric:
-                    print("New Overall Best Portfolio Found!")
+                # Update best if an improvement is found
+                if (variable == 'volatility' and current_metric < self.overall_best_metric) or \
+                   (variable != 'volatility' and current_metric > self.overall_best_metric):
+
+                    print(f"New Overall Best Portfolio Found at Generation {i+1}!")
                     self.overall_best = current_best
                     self.overall_best_metric = current_metric
+
+                    print("Weights:", self.overall_best.get_weights())
+                    print(variable, "=", self.overall_best_metric)
+                    print("---------------")
 
             # print("Generation:", i)
             # print("Current Generation Best Weights:", current_best.get_weights())

@@ -11,6 +11,17 @@ def Markowitz_Model(expected_returns, cov_matrix, target_return=None, allow_shor
     :param allow_short: (Boolean) Whether short selling is allowed (if False, weights >= 0).
     :return: Optimal weights, portfolio return, and portfolio variance.
     """
+
+    # Check the inputs if it returns none
+    if expected_returns is None:
+        raise ValueError("The expected returns cannot be none.")
+    
+    if cov_matrix is None:
+        raise ValueError("The covariance matrix cannot be none.")
+    
+    if expected_returns.ndim !=1:
+        raise ValueError("Expected returns must be a one dimensional array.")
+
     n = len(expected_returns)
     
     # Decision variable: weights of assets in the portfolio
@@ -42,23 +53,25 @@ def Markowitz_Model(expected_returns, cov_matrix, target_return=None, allow_shor
     
     return optimal_weights, opt_return, opt_variance
 
-# # Example usage:
-# # Let's say we have 5 assets:
-# expected_returns = np.array([0.12, 0.10, 0.15, 0.09, 0.11])
-# # A 5x5 covariance matrix (symmetric, positive semidefinite)
-# cov_matrix = np.array([
-#     [0.005, -0.010, 0.004, -0.002, 0.003],
-#     [-0.010, 0.040, -0.002, 0.004, -0.003],
-#     [0.004, -0.002, 0.023, 0.002, 0.001],
-#     [-0.002, 0.004, 0.002, 0.018, 0.005],
-#     [0.003, -0.003, 0.001, 0.005, 0.030]
-# ])
+# Example usage:
+# Let's say we have 5 assets:
 
-# # Optionally set a target return, e.g., 0.11, and disallow short selling:
-# optimal_weights, portfolio_return, portfolio_variance = markowitz_optimization(
-#     expected_returns, cov_matrix, target_return=0.11, allow_short=False
-# )
 
-# print("Optimal Weights:", optimal_weights)
-# print("Portfolio Expected Return:", portfolio_return)
-# print("Portfolio Variance:", portfolio_variance)
+expected_returns = np.array([0.12, 0.10, 0.15, 0.09, 0.11])
+# A 5x5 covariance matrix (symmetric, positive semidefinite)
+cov_matrix = np.array([
+    [0.005, -0.010, 0.004, -0.002, 0.003],
+    [-0.010, 0.040, -0.002, 0.004, -0.003],
+    [0.004, -0.002, 0.023, 0.002, 0.001],
+    [-0.002, 0.004, 0.002, 0.018, 0.005],
+    [0.003, -0.003, 0.001, 0.005, 0.030]
+])
+
+# Optionally set a target return, e.g., 0.11, and disallow short selling:
+optimal_weights, portfolio_return, portfolio_variance = Markowitz_Model(
+    expected_returns, cov_matrix, target_return=0.11, allow_short=False
+)
+
+print("Optimal Weights:", optimal_weights)
+print("Portfolio Expected Return:", portfolio_return)
+print("Portfolio Variance:", portfolio_variance)

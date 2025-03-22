@@ -67,6 +67,9 @@ class Particle_Swarm_Optimisation:
         For 'volatility', lower is better; for 'return' or 'sharpe_ratio', higher is better.
         This function will add a 'fitness' column to the swarm DataFrame.
         """
+        # If the variable is not the allowed metrics, raise an error.
+        if variable not in ['volatility','return','sharpe_ratio']:
+            raise ValueError("Invalid fitness variable '{variable}', must be one of volatility, return, sharpe_ratio")
         self.swarm_df = self.to_table(self.swarm)
         if variable == 'volatility':
             # Lower volatility is better.
@@ -121,7 +124,9 @@ class Particle_Swarm_Optimisation:
 
             # If all weights are zero, reset to equal weights
             if new_position.sum() == 0:
+                print("Reseting to equal weight.")
                 new_position = np.ones(self.n_assets) / self.n_assets
+
             else:
                 # Normalize to sum to 1
                 new_position = new_position / new_position.sum()
@@ -160,12 +165,19 @@ class Particle_Swarm_Optimisation:
             mean_fitness = self.swarm_df['fitness'].mean()
             self.swarm_fitness.append(best_fitness)
             self.swarm_mean.append(mean_fitness)
+
+            print(f"Iteration: Best sharpe_ratio = {best_fitness:.7f}")
         return None
 
     def get_best_solution(self, variable):
         """
         Return the best portfolio in the swarm based on the specified variable.
         """
+
+        # If the variable is not the allowed metrics, raise an error.
+        if variable not in ['volatility','return','sharpe_ratio']:
+            raise ValueError("Invalid fitness variable '{variable}', must be one of volatility, return, sharpe_ratio")
+
         # Evaluate fitness for each particle.
         self.set_fitness(variable)
 

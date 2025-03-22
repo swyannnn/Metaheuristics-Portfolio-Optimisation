@@ -62,26 +62,26 @@ def main(config):
     # Set up TensorBoard SummaryWriter
     writer = SummaryWriter(log_dir="logs")
     
-    # --- Genetic Algorithm ---
-    ga_config = config.get("Genetic_Algorithm", {})
-    GA = Genetic_algorithm(monthly_returns, corr_matrix, risk_free_rate, min_weight, ga_config)
-    GA.run(max_iterations, metric)
-    best_ga = GA.overall_best
-    print("Genetic Algorithm Best Portfolio:")
-    print("Weights:", best_ga.get_weights())
-    print(metric, "=", getattr(best_ga, metric))
-    print("---------------")
+    # # --- Genetic Algorithm ---
+    # ga_config = config.get("Genetic_Algorithm", {})
+    # GA = Genetic_algorithm(monthly_returns, corr_matrix, risk_free_rate, min_weight, ga_config)
+    # GA.run(max_iterations, metric)
+    # best_ga = GA.overall_best
+    # print("Genetic Algorithm Best Portfolio:")
+    # print("Weights:", best_ga.get_weights())
+    # print(metric, "=", getattr(best_ga, metric))
+    # print("---------------")
 
-    # Log PSO analysis metrics to TensorBoard
-    try:
-        ga_analysis = GA.get_analysis()
-        for i, row in ga_analysis.iterrows():
-            writer.add_scalar('Genetic_Algorithm/best_fitness', row['best_fitness'], i)
-            writer.add_scalar('Genetic_Algorithm/mean_fitness', row['fitness_mean'], i)
-    except Exception as e:
-        print("PSO get_analysis() not available:", e)
+    # # Log PSO analysis metrics to TensorBoard
+    # try:
+    #     ga_analysis = GA.get_analysis()
+    #     for i, row in ga_analysis.iterrows():
+    #         writer.add_scalar('Genetic_Algorithm/best_fitness', row['best_fitness'], i)
+    #         writer.add_scalar('Genetic_Algorithm/mean_fitness', row['fitness_mean'], i)
+    # except Exception as e:
+    #     print("PSO get_analysis() not available:", e)
 
-    # # --- Particle Swarm Optimization ---
+    # --- Particle Swarm Optimization ---
     # pso_config = config.get("Particle_Swarm_Optimization", {})
     # num_particles = pso_config.get("num_particles", 10)
     # inertia = pso_config.get("inertia", 0.5)
@@ -127,7 +127,7 @@ def main(config):
     # except Exception as e:
     #     print("SA get_analysis() not available:", e)
     
-    # # --- Ant Colony Optimization ---
+    # --- Ant Colony Optimization ---
     # aco_config = config.get("Ant_Colony_Optimization", {})
     # num_ants = aco_config.get("num_ants", 10)
     # ACO = Ant_Colony_Optimisation(monthly_returns, corr_matrix, risk_free_rate, min_weight, num_ants)
@@ -147,30 +147,30 @@ def main(config):
     # except Exception as e:
     #     print("ACO get_analysis() not available:", e)
     
-    # # --- Markowitz Optimization ---
-    # # For Markowitz, compute expected returns and covariance matrix from monthly returns.
-    # # Assume monthly_returns are in percentages; convert to decimals.
-    # expected_returns = monthly_returns.mean().values / 100
-    # # Compute covariance of monthly returns and scale appropriately.
-    # cov_matrix = monthly_returns.cov().values / (100**2)
-    # opt_weights, port_return, port_variance = Markowitz_Model(expected_returns, cov_matrix,
-    #                                                                   target_return=None, allow_short=False)
-    # port_volatility = math.sqrt(port_variance)
-    # port_sharpe = (port_return - risk_free_rate) / port_volatility
-    # print("Markowitz Optimization Portfolio:")
-    # print("Weights:", opt_weights)
-    # print("Expected Return:", port_return)
-    # print("Volatility:", port_volatility)
-    # print("Sharpe Ratio:", port_sharpe)
-    # print("---------------")
+    # --- Markowitz Optimization ---
+    # For Markowitz, compute expected returns and covariance matrix from monthly returns.
+    # Assume monthly_returns are in percentages; convert to decimals.
+    expected_returns = monthly_returns.mean().values / 100
+    # Compute covariance of monthly returns and scale appropriately.
+    cov_matrix = monthly_returns.cov().values / (100**2)
+    opt_weights, port_return, port_variance = Markowitz_Model(expected_returns, cov_matrix,
+                                                                      target_return=None, allow_short=False)
+    port_volatility = math.sqrt(port_variance)
+    port_sharpe = (port_return - risk_free_rate) / port_volatility
+    print("Markowitz Optimization Portfolio:")
+    print("Weights:", opt_weights)
+    print("Expected Return:", port_return)
+    print("Volatility:", port_volatility)
+    print("Sharpe Ratio:", port_sharpe)
+    print("---------------")
 
-    # # Log Markowitz analysis metrics to TensorBoard
-    # try: 
-    #     writer.add_scalar('Markowitz_Model/return', port_return)
-    #     writer.add_scalar('Markowitz_Model/volatility', port_volatility)
-    #     writer.add_scalar('Markowitz_Model/sharpe_ratio', port_sharpe)
-    # except Exception as e:
-    #     print("Markowitz get_analysis() not available:", e)
+    # Log Markowitz analysis metrics to TensorBoard
+    try: 
+        writer.add_scalar('Markowitz_Model/return', port_return)
+        writer.add_scalar('Markowitz_Model/volatility', port_volatility)
+        writer.add_scalar('Markowitz_Model/sharpe_ratio', port_sharpe)
+    except Exception as e:
+        print("Markowitz get_analysis() not available:", e)
 
     writer.close()
 

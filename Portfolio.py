@@ -1,10 +1,11 @@
 import numpy as np
+import pandas as pd
 import math
 import random
 
 class Portfolio:
     def __init__(self, returns_df, corr_matrix, risk_free, min_weight):
-        self.returns = returns_df
+        self.returns = returns_df 
         self.corr = corr_matrix
         self.description = self.returns.describe()
         self.n_assets = self.returns.shape[1]
@@ -25,7 +26,7 @@ class Portfolio:
         
         weights = []
         # For all but the last asset, allocate a random portion of the free_weight.
-        for i in range(self.n_assets - 1):
+        for _ in range(self.n_assets - 1):
             # Random weight between 0 and free_weight
             w = random.uniform(0, free_weight)
             weights.append(w)
@@ -41,33 +42,68 @@ class Portfolio:
         self.weights = np.array(weights)
         return None
     
+    def repair_weights(self):
+        """
+        Adjusts a candidate weights vector so that each weight is at least min_weight 
+        and the total sums to 1.
+        """
+        n = len(self.weights)
+        total_min = n * self.min_weight
+        if total_min > 1:
+            raise ValueError("Infeasible: the minimum weight is too high for the number of assets.")
+        
+        # Calculate the surplus above the minimum for each asset.
+        surplus = np.maximum(self.weights - self.min_weight, 0)
+        total_surplus = surplus.sum()
+        
+        # If no surplus exists, assign equal distribution for the free weight.
+        if total_surplus == 0:
+            return np.full(n, self.min_weight) + (1 - total_min) / n
+        
+        # Reallocate the free weight (1 - total_min) proportionally to the surplus.
+        new_weights = self.min_weight + (surplus / total_surplus) * (1 - total_min)
+        return new_weights
+    
     def set_weights(self, weights):
-        # Normalize weights to sum to 1.
-        self.weights = (weights/weights.sum())
+        self.weights = weights 
+
+        # Check if weights are valid
+        tolerance = 1e-8
+        # check if weights are less than min_weight
+        if ((self.weights + tolerance) < self.min_weight).any():
+            self.weights = self.repair_weights()
+        # check if weights are greater than 1
+        if (self.weights > 1).any():
+            self.weights = self.repair_weights()
+        # check if sum of weight is near 1
+        if not np.isclose(self.weights.sum(), 1.0, atol=1e-2):
+            # normalize weights to sum to 1
+            self.weights = self.weights / self.weights.sum()
+            
+        # update expected return, volatility, and sharpe ratio
+        self.set_expected_return()
+        self.set_volatility()
+        self.set_sharpe_ratio()
+
         return None
     
     def set_expected_return(self):
-        # Compute expected return as weighted sum of asset means.
-        weighted = self.weights*self.description.loc['mean']
-
-        # Round to 2 decimal places.
-        self.expected_return = weighted.sum().round(2)
-        return None
+        # Calculate the monthly weighted expected return
+        monthly_return = (self.weights * self.description.loc['mean']).sum()
+        # Annualize by multiplying by 12
+        self.expected_return = monthly_return * 12
     
     def set_volatility(self):
-        # Compute weighted standard deviation of assets.
         std = self.description.loc['std'].values
-
-        # Compute covariance matrix of assets
-        m1 = (self.weights*std).reshape(self.n_assets,1)
-        m2 = m1.reshape(1,self.n_assets)
-
-        # Compute volatility as square root of weighted sum of covariances.
-        self.volatility = math.sqrt((m1*self.corr*m2).sum())
-        return None
+        m1 = (self.weights * std).reshape(self.n_assets, 1)
+        m2 = m1.reshape(1, self.n_assets)
+        # Calculate the monthly portfolio variance using the correlation matrix
+        monthly_variance = (m1 * self.corr * m2).sum()
+        monthly_volatility = math.sqrt(monthly_variance)
+        # Annualize volatility by multiplying by sqrt(12)
+        self.volatility = monthly_volatility * math.sqrt(12)
     
     def set_sharpe_ratio(self):
-        # Compute Sharpe ratio as (expected return - risk-free rate) / volatility.
         self.sharpe_ratio = (self.expected_return-self.risk_free)/self.volatility
         return None
     
@@ -82,3 +118,13 @@ class Portfolio:
     
     def get_sharpe_ratio(self):
         return self.sharpe_ratio
+    
+    @staticmethod
+    def evaluate_solution(array):
+        # Convert swarm (array of Portfolio instances) into a DataFrame with computed metrics
+        exp_returns = [p.get_expected_return() for p in array]
+        volatilities = [p.get_volatility() for p in array]
+        sharpe_ratios = [p.get_sharpe_ratio() for p in array]
+        d = {'return': exp_returns, 'volatility': volatilities, 'sharpe_ratio': sharpe_ratios}
+        df = pd.DataFrame(data=d)
+        return df

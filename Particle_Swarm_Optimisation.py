@@ -1,9 +1,10 @@
 import pandas as pd
 import numpy as np
+import copy
 from Portfolio import Portfolio
 
 class Particle_Swarm_Optimisation:
-    def __init__(self, returns_df, corr_matrix, risk_free, size, min_weight, inertia, cognitive, social):
+    def __init__(self, returns_df, corr_matrix, risk_free, min_weight, pso_config):
         """
         :param returns_df: DataFrame of returns (used by Portfolio to compute metrics)
         :param corr_matrix: Correlation matrix (or covariance info) between assets
@@ -15,83 +16,120 @@ class Particle_Swarm_Optimisation:
         """
         self.returns = returns_df
         self.corr = corr_matrix
-        self.risk_free = risk_free
-        self.size = size
+        self.risk_free = risk_free 
         self.min_weight = min_weight
-        self.inertia = inertia
-        self.cognitive = cognitive
-        self.social = social
+        self.swarm_size = pso_config.get("num_particles", 10)
+        self.inertia = pso_config.get("inertia", 0.65)
+        self.cognitive = pso_config.get("cognitive", 2)
+        self.social = pso_config.get("social", 2)
 
         # Create a swarm of particles (each a Portfolio instance)
         self.swarm = []
-        for _ in range(size):
+        for _ in range(self.swarm_size):
             particle = Portfolio(self.returns, self.corr, self.risk_free, self.min_weight)
             self.swarm.append(particle)
 
         # Initialize velocities for each particle as a numpy array with same dimensions as weights.
         self.n_assets = len(self.swarm[0].get_weights())
-        self.velocities = [np.zeros(self.n_assets) for _ in range(self.size)]
+        self.velocities = [np.zeros(self.n_assets) for _ in range(self.swarm_size)]
 
         # Initialize personal best for each particle
         self.personal_best = [particle.get_weights().copy() for particle in self.swarm]
-        self.personal_best_fitness = [None] * self.size
+        self.personal_best_fitness = [None] * self.swarm_size
 
-        # Evaluate initial fitness based on the chosen variable (e.g., 'volatility', 'return', 'sharpe_ratio')
+        # Evaluate initial fitness based on the chosen metric (e.g., 'volatility', 'return', 'sharpe_ratio')
         # Higher fitness is better. This will add a 'fitness' column to the swarm DataFrame.
-        self.swarm_df = self.to_table(self.swarm)
-        self.global_best_index = self.swarm_df['fitness'].idxmax() if 'fitness' in self.swarm_df.columns else 0
-        self.global_best = self.swarm[self.global_best_index].get_weights().copy()
+        self.swarm_df = Portfolio.evaluate_solution(self.swarm)
+        self.current_best_index = self.swarm_df['fitness'].idxmax() if 'fitness' in self.swarm_df.columns else 0
+        self.current_best_weight = self.swarm[self.current_best_index].get_weights().copy()
 
         # To track evolution over iterations
         self.tree = []
         self.tree.append(self.swarm.copy())
-        self.swarm_fitness = []
+        self.best_overall_fitness = []
         self.swarm_mean = []
-        
-    def to_table(self, array):
-        # Convert swarm into a DataFrame with computed metrics
-        exp_returns = [p.get_expected_return() for p in array]
-        volatilities = [p.get_volatility() for p in array]
-        sharpe_ratios = [p.get_sharpe_ratio() for p in array]
-        d = {'return': exp_returns, 'volatility': volatilities, 'sharpe_ratio': sharpe_ratios}
-        df = pd.DataFrame(data=d)
-        # For selection purposes, we need to define a fitness.
-        # For example, if variable is 'sharpe_ratio', we treat that as fitness.
-        # Otherwise, if using volatility as fitness, lower volatility means better fitness.
-        # In this helper, we'll let the user call set_fitness() separately.
-        return df
 
-    def set_fitness(self, variable):
+    def run(self, iterations, metric):
+        # Initialize overall best tracking.
+        if metric == 'volatility':
+            self.overall_best_portfolio_metric = float('inf')
+        else:
+            self.overall_best_portfolio_metric = -float('inf')
+        self.overall_best_portfolio = None
+
+        for i in range(iterations):
+            # print("Iteration", i)
+            # Evaluate fitness for each particle.
+            self.set_fitness(metric)
+
+            # Update velocities and positions.
+            self.update_velocity()
+            self.update_position()
+
+            # Record current state of the swarm.
+            self.tree.append(self.swarm.copy())
+
+            # Get the best portfolio from the current iteration.
+            current_best_portfolio = self.get_best_solution(metric)
+
+            if metric == 'volatility':
+                current_metric = - current_best_portfolio.get_volatility()
+            elif metric == 'return':
+                current_metric = current_best_portfolio.get_expected_return()
+            elif metric == 'sharpe_ratio':
+                current_metric = current_best_portfolio.get_sharpe_ratio()
+            else:
+                raise ValueError("Unsupported metric. Supported metrics are: volatility, return, sharpe_ratio")
+
+            # Store the mean fitness of the swarm.
+            self.swarm_mean.append(self.swarm_df['fitness'].mean())
+
+            # Update overall best if the current metric is better.
+            if self.overall_best_portfolio is None:
+                self.overall_best_portfolio = copy.deepcopy(current_best_portfolio)
+                self.overall_best_portfolio_metric = current_metric
+                self.best_overall_fitness.append(current_metric)
+            else:
+                if (metric == 'volatility' and current_metric < self.overall_best_portfolio_metric) or \
+                (metric != 'volatility' and current_metric > self.overall_best_portfolio_metric):
+                    self.overall_best_portfolio = copy.deepcopy(current_best_portfolio)
+                    self.overall_best_portfolio_metric = current_metric
+                    self.current_best_weight = self.overall_best_portfolio.get_weights().copy()
+                    self.best_overall_fitness.append(current_metric)
+                    # print(f"New Overall Best Portfolio Found at Iteration {i}!")
+                    # print("Weights:", self.overall_best_portfolio.get_weights())
+                    # print(f"{metric} =", self.overall_best_portfolio_metric)
+                    # print("---------------")
+                else:
+                    self.best_overall_fitness.append(self.best_overall_fitness[-1])
+        return None
+
+    def set_fitness(self, metric):
         """
         Evaluate fitness for each particle.
         For 'volatility', lower is better; for 'return' or 'sharpe_ratio', higher is better.
         This function will add a 'fitness' column to the swarm DataFrame.
         """
-        # If the variable is not the allowed metrics, raise an error.
-        if variable not in ['volatility','return','sharpe_ratio']:
-            raise ValueError("Invalid fitness variable '{variable}', must be one of volatility, return, sharpe_ratio")
-        self.swarm_df = self.to_table(self.swarm)
-        if variable == 'volatility':
+        # If the metric is not the allowed metrics, raise an error.
+        if metric not in ['volatility','return','sharpe_ratio']:
+            raise ValueError("Invalid fitness metric '{metric}', must be one of volatility, return, sharpe_ratio")
+        self.swarm_df = Portfolio.evaluate_solution(self.swarm)
+        if metric == 'volatility':
             # Lower volatility is better.
-            max_vol = self.swarm_df[variable].max()
-            self.swarm_df.sort_values(by=variable, inplace=True, ascending=True)
-            self.swarm_df['fitness'] = max_vol - self.swarm_df[variable] + 1
+            max_vol = self.swarm_df[metric].max()
+            self.swarm_df.sort_values(by=metric, inplace=True, ascending=True)
+            self.swarm_df['fitness'] = max_vol - self.swarm_df[metric] + 1
         else:
             # For return or sharpe_ratio, higher is better.
-            self.swarm_df.sort_values(by=variable, inplace=True, ascending=False)
-            self.swarm_df['fitness'] = self.swarm_df[variable]
-
+            self.swarm_df.sort_values(by=metric, inplace=True, ascending=False)
+            self.swarm_df['fitness'] = self.swarm_df[metric]
+        
         # Update personal best fitness if not already set.
-        for i in range(self.size):
+        for i in range(self.swarm_size):
             current_fitness = self.swarm_df.iloc[i]['fitness']
             if self.personal_best_fitness[i] is None or current_fitness > self.personal_best_fitness[i]:
                 self.personal_best[i] = self.swarm[i].get_weights().copy()
                 self.personal_best_fitness[i] = current_fitness
-
-        # Update global best among all particles.
-        best_idx = self.swarm_df['fitness'].idxmax()
-        self.global_best = self.swarm[best_idx].get_weights().copy()
-        return self.swarm_df
 
     def update_velocity(self):
         """
@@ -99,98 +137,53 @@ class Particle_Swarm_Optimisation:
             v = inertia * v + cognitive * r1 * (pbest - position) + social * r2 * (gbest - position)
         where r1 and r2 are random numbers between 0 and 1.
         """
-        for i in range(self.size):
+        for i in range(self.swarm_size):
             current_position = self.swarm[i].get_weights()
             r1 = np.random.rand(self.n_assets)
             r2 = np.random.rand(self.n_assets)
+            inertia_component = self.inertia * self.velocities[i]
             cognitive_component = self.cognitive * r1 * (self.personal_best[i] - current_position)
-            social_component = self.social * r2 * (self.global_best - current_position)
-            self.velocities[i] = (self.inertia * self.velocities[i] + cognitive_component + social_component)
+            social_component = self.social * r2 * (self.current_best_weight - current_position)
+            self.velocities[i] = (inertia_component + cognitive_component + social_component)
         return None
 
     def update_position(self):
         """
         Update each particle's position (portfolio weights) using:
             new_position = current_position + velocity
-        Then re-normalize the weights to sum to 1.
+        Then re-normalize the weights to sum to 1 and enforce that each weight is at least self.min_weight.
         """
-        for i in range(self.size):
+        for i in range(self.swarm_size):
             # Update position based on velocity
             current_position = self.swarm[i].get_weights()
             new_position = current_position + self.velocities[i]
 
-            # Ensure weights are non-negative and sum to 1
-            new_position = np.maximum(new_position, 0)  # enforce non-negativity
-
-            # If all weights are zero, reset to equal weights
-            if new_position.sum() == 0:
-                print("Reseting to equal weight.")
-                new_position = np.ones(self.n_assets) / self.n_assets
-
-            else:
-                # Normalize to sum to 1
-                new_position = new_position / new_position.sum()
-
-            # Update the particle's position
+            # update weights
             self.swarm[i].set_weights(new_position)
-            # Recalculate portfolio metrics after weight update.
-            self.swarm[i].set_expected_return()
-            self.swarm[i].set_volatility()
-            self.swarm[i].set_sharpe_ratio()
-
         return None
 
-    def run(self, iterations, variable):
+    def get_best_solution(self, metric):
         """
-        Run the PSO algorithm for a given number of iterations.
-        The variable parameter determines which metric (e.g., 'volatility', 'return', 'sharpe_ratio')
-        is used for evaluating fitness.
-        """
-        for _ in range(iterations):
-            # Evaluate fitness for each particle.
-            self.set_fitness(variable)
-
-            # Update velocities based on personal best and global best.
-            self.update_velocity()
-
-            # Update positions based on the new velocities.
-            self.update_position()
-
-            # Record current state of the swarm.
-            self.tree.append(self.swarm.copy())
-
-            # record best and mean fitness.
-            best_fitness = self.swarm_df['fitness'].max()
-
-            mean_fitness = self.swarm_df['fitness'].mean()
-            self.swarm_fitness.append(best_fitness)
-            self.swarm_mean.append(mean_fitness)
-
-            print(f"Iteration: Best sharpe_ratio = {best_fitness:.7f}")
-        return None
-
-    def get_best_solution(self, variable):
-        """
-        Return the best portfolio in the swarm based on the specified variable.
+        Return the best portfolio in the swarm based on the specified metric.
         """
 
-        # If the variable is not the allowed metrics, raise an error.
-        if variable not in ['volatility','return','sharpe_ratio']:
-            raise ValueError("Invalid fitness variable '{variable}', must be one of volatility, return, sharpe_ratio")
-
+        # If the metric is not the allowed metrics, raise an error.
+        if metric not in ['volatility','return','sharpe_ratio']:
+            raise ValueError("Invalid fitness metric '{metric}', must be one of volatility, return, sharpe_ratio")
+        
         # Evaluate fitness for each particle.
-        self.set_fitness(variable)
+        self.set_fitness(metric)
 
-        # Find the best particle based on the variable.
-        best_idx = self.swarm_df['fitness'].idxmax()
+        # Find the best particle based on the metric.
+        current_best_idx = self.swarm_df['fitness'].idxmax()
 
-        return self.swarm[best_idx]
-
+        return self.swarm[current_best_idx]
+    
     def get_tree(self):
         return self.tree
 
     def get_analysis(self):
         # Create a DataFrame with best fitness and mean fitness over iterations.
-        d = {'best_fitness': self.swarm_fitness, 'fitness_mean': self.swarm_mean}
+        d = {'best_fitness': self.best_overall_fitness, 'mean_fitness': self.swarm_mean}
         output = pd.DataFrame(data=d)
         return output

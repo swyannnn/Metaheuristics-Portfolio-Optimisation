@@ -4,7 +4,7 @@ import pandas as pd
 from Portfolio import Portfolio
 
 class Simulated_Annealing:
-    def __init__(self, returns_df, corr_matrix, risk_free, min_weight, initial_temperature, cooling_rate):
+    def __init__(self, returns_df, corr_matrix, risk_free, min_weight, sa_config):
         """
         :param returns_df: DataFrame of returns (for Portfolio calculations)
         :param corr_matrix: Correlation matrix (or used to compute covariance)
@@ -14,33 +14,21 @@ class Simulated_Annealing:
         """
         self.returns = returns_df
         self.corr = corr_matrix
-        self.risk_free = risk_free
+        self.risk_free = risk_free 
         self.min_weight = min_weight
-        self.temperature = initial_temperature
-        self.cooling_rate = cooling_rate
+        self.initial_temperature = sa_config.get("initial_temperature", 1000)
+        self.temperature = self.initial_temperature
+        self.alpha = sa_config.get("alpha", 0.95)
+        self.beta = sa_config.get("beta", 0.99)
+        self.schedule = sa_config.get("schedule", "linear")
         
         # Initialize the current solution and best solution as a Portfolio instance.
         self.current_solution = Portfolio(self.returns, self.corr, self.risk_free, self.min_weight)
-        self.best_solution = self.current_solution
-        self.history = []  # Track objective values (fitness) over iterations
+        self.best_solution = None
+        self.current_temperature = []
+        self.overall_best_metric = []
+        self.current_fitness = []
         self.iteration = 0
-
-    def objective(self, portfolio, variable):
-        """
-        Compute the objective value for a given portfolio based on the chosen variable.
-        For volatility, lower is better (minimize risk);
-        for return or sharpe_ratio, higher is better (so we invert them for minimization).
-        """
-        if variable == 'volatility':
-            return -portfolio.get_volatility()
-        elif variable == 'return':
-            # Since we want to maximize return, we can maximizing the return.
-            return portfolio.get_expected_return()
-        elif variable == 'sharpe_ratio':
-            # Similarly, maximize Sharpe ratio by maximizing it.
-            return portfolio.get_sharpe_ratio()
-        else:
-            raise ValueError("Unsupported objective variable.")
 
     def perturb_solution(self, solution):
         """
@@ -79,68 +67,90 @@ class Simulated_Annealing:
         new_solution.set_weights(new_weights)
         return new_solution
 
-    def run(self, iterations, variable):
+    def run(self, iterations, metric):
         """
         Run the Simulated Annealing algorithm for a number of iterations.
         :param iterations: Number of iterations to run.
-        :param variable: The objective variable to optimize ('volatility', 'return', or 'sharpe_ratio').
+        :param metric: The metric metric to optimize ('volatility', 'return', or 'sharpe_ratio').
         """
+        self.max_iterations = iterations
         for _ in range(iterations):
             # Generate a neighboring solution by perturbation.
             new_solution = self.perturb_solution(self.current_solution)
             
-            # Calculate objective values for current and new solutions.
-            current_obj = self.objective(self.current_solution, variable)
-            new_obj = self.objective(new_solution, variable)
+            # Calculate metric values for current and new solutions.
+            current_obj = Portfolio.evaluate_solution([self.current_solution])
+            current_metric = current_obj[metric][0]
+            new_obj = Portfolio.evaluate_solution([new_solution])
+            new_metric = new_obj[metric][0]
             
-            # Compute the change in objective (delta)
-            delta = new_obj - current_obj
+            # Store the current metric in current_fitness
+            self.current_fitness.append(current_metric)
+
+            # Compute the change in metric (delta)
+            delta = new_metric - current_metric
 
             # Decide whether to accept the new solution if it is better or with some probability if it is worse.
             r = np.random.rand()
-            if delta > 0 or r < np.exp(delta / self.temperature):
-                self.current_solution = new_solution
-                # Update best solution.
-                if self.objective(new_solution, variable) > self.objective(self.best_solution, variable):
-                    self.best_solution = new_solution
+            if self.best_solution is None or len(self.overall_best_metric) == 0:
+                # First iteration: accept the first solution.
+                self.best_solution = new_solution
+                self.overall_best_metric.append(new_metric)
             else:
-                # New solution is worse and not accepted.
-                pass
-            
-            # Record the current objective value for analysis.
-            self.history.append((self.objective(self.current_solution, variable), self.temperature))
+                # If the new solution is better, accept it. Or if the new solution is worse, accept it with a probability based on the temperature.
+                if delta > 0 or r < np.exp(delta / self.temperature):
+                    self.current_solution = new_solution
+                    # Update best solution.
+                    if new_metric > self.overall_best_metric[-1]:
+                        # print("New best solution found at iteration", self.iteration, "with fitness", new_obj)
+                        # print("New weights:", new_solution.get_weights())
+                        # print(f"New {metric}:", new_solution.get_sharpe_ratio())
+                        # print()
+                        self.overall_best_metric.append(new_metric)
+                        self.best_solution = new_solution
+                    else: 
+                        # New solution is worse but accepted.
+                        self.overall_best_metric.append(self.overall_best_metric[-1])
+                else:
+                    # New solution is worse and not accepted.
+                    self.overall_best_metric.append(self.overall_best_metric[-1])
             
             # Cool down the temperature.
-            self.temperature -= (self.temperature * self.cooling_rate)
+            self.temperature = self.adjust_temperature()
             self.iteration += 1
         return None
-
+    
     def get_best_solution(self):
         return self.best_solution
-    
+
+    def adjust_temperature(self):
+        """
+        Adjust the temperature based on the cooling schedule.
+        """
+        # append the current temperature to the list for analysis
+        self.current_temperature.append(self.temperature)
+        if self.schedule == "linear":
+            # Linear cooling
+            return self.temperature - (self.initial_temperature / (self.max_iterations))
+        elif self.schedule == "geometric":
+            # Geometric cooling
+            return self.temperature * self.alpha
+        elif self.schedule == "lundy_mees":
+            # Lundy-Meeson cooling
+            return self.temperature / (1 + self.beta * self.temperature)
+        else:
+            raise ValueError("Unsupported cooling schedule. Use 'linear', 'geometric' or 'lundy_meeson'.")
+
     def get_analysis(self):
         """
-        Returns a DataFrame containing:
-        - iteration: iteration index
-        - current_fitness: objective value at each iteration (from self.history)
-        - best_fitness: the best objective value encountered so far up to that iteration.
+        Get the analysis of the simulated annealing process.
+        Returns a DataFrame with the best and current fitness values at each iteration.
         """
-        best_so_far = []
-        current_best = -float('inf')
-        fitness_values = []
-        temperatures = []
-        for obj_val, temp in self.history:
-            fitness_values.append(obj_val)
-            temperatures.append(temp)
-            if obj_val > current_best:
-                current_best = obj_val
-            best_so_far.append(current_best)
-        
-        df = pd.DataFrame({
-            'iteration': list(range(len(self.history))),
-            'current_fitness': fitness_values,
-            'temperature': temperatures,
-            'best_fitness': best_so_far
+        analysis_df = pd.DataFrame({
+            'iteration': range(self.iteration),
+            'best_fitness': self.overall_best_metric,
+            'current_fitness': self.current_fitness,
+            'temperature': self.current_temperature
         })
-        return df
+        return analysis_df
 

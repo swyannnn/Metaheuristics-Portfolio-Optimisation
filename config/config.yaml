@@ -1,6 +1,7 @@
 tickers: ['AAPL', 'AMZN', 'GOOG', 'META', "NFLX"]
 stock_data_path: "./data/"
-max_iterations: 1000
+max_iterations: 100
+max_time: 1 # in seconds
 risk_free_rate: 0.08877 # (in decimal, not percentage), got this value by averaging the risk-free rates of the time period 2014.01.01 to 2019.12.31, refer to https://fred.stlouisfed.org/series/DTB3
 min_weight: 0.01
 metric: 'sharpe_ratio' # 'sharpe_ratio', 'return', 'volatility'

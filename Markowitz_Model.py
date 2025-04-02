@@ -23,8 +23,8 @@ class Markowitz_Model:
         Maximum iterations for the optimization algorithm (currently not directly used).
     """
     
-    def __init__(self, monthly_returns, corr_matrix, risk_free_rate=0.02, min_weight=0.01, 
-                 metric="sharpe_ratio", max_iterations=1000):
+    def __init__(self, monthly_returns, corr_matrix, risk_free_rate, min_weight, 
+                 metric, max_iterations):
         self.returns = monthly_returns
         self.corr_matrix = corr_matrix  # stored for reference; not used directly in optimization
         self.risk_free_rate = risk_free_rate 

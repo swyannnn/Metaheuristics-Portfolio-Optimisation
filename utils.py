@@ -13,11 +13,12 @@ def load_stock_data(path):
     df_list = []
     for file in files:
         # Read CSV, use Date as index, select 'Adjusted Close' column
-        df = pd.read_csv(os.path.join(path, file), index_col='Date', parse_dates=True)[['Adj Close']]
+        df = pd.read_csv(os.path.join(path, file), index_col='Date', parse_dates=True)[['Close']]
         
         # Rename 'Adj Close' column to stock name
         stock_name = file.replace(".csv", "")
-        df.rename(columns={'Adj Close': stock_name}, inplace=True)
+        # df.rename(columns={'Adj Close': stock_name}, inplace=True)
+        df.rename(columns={'Close': stock_name}, inplace=True)
 
         # Append to list
         df_list.append(df)

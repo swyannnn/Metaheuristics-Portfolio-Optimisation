@@ -18,6 +18,11 @@ class Portfolio:
         return None
     
     def initialize_weights(self):
+        """
+        Initializes the weights of the portfolio randomly, ensuring that:
+        - Each weight is at least min_weight.
+        - The total weights sum to 1.
+        """
         # Total weight reserved for minimum allocations
         total_min = self.n_assets * self.min_weight
 
@@ -65,6 +70,14 @@ class Portfolio:
         return new_weights
     
     def set_weights(self, weights):
+        """
+        Sets the weights of the portfolio and checks if they are valid.
+        If not, repairs them.
+
+        Parameters:
+        weights : array-like
+            The weights to set for the portfolio.
+        """
         self.weights = weights 
 
         # Check if weights are valid
@@ -88,12 +101,22 @@ class Portfolio:
         return None
     
     def set_expected_return(self):
+        """
+        Calculates the expected return of the portfolio based on the weights and the mean returns of the assets.
+        The expected return is calculated as the weighted sum of the mean returns of the assets.
+        The result is annualized by multiplying by 12.
+        """
         # Calculate the monthly weighted expected return
         monthly_return = (self.weights * self.description.loc['mean']).sum()
         # Annualize by multiplying by 12
         self.expected_return = monthly_return * 12
     
     def set_volatility(self):
+        """
+        Calculates the portfolio volatility based on the weights and the standard deviations of the assets.
+        The volatility is calculated using the correlation matrix and the weights.
+        The result is annualized by multiplying by sqrt(12).
+        """
         std = self.description.loc['std'].values
         m1 = (self.weights * std).reshape(self.n_assets, 1)
         m2 = m1.reshape(1, self.n_assets)
@@ -104,23 +127,46 @@ class Portfolio:
         self.volatility = monthly_volatility * math.sqrt(12)
     
     def set_sharpe_ratio(self):
+        """
+        Calculates the Sharpe ratio of the portfolio based on the expected return, risk-free rate, and volatility.
+        The Sharpe ratio is calculated as (expected return - risk-free rate) / volatility.
+        """
         self.sharpe_ratio = (self.expected_return-self.risk_free)/self.volatility
         return None
     
     def get_weights(self):
+        """
+        Returns the weights of the portfolio.
+        """
         return self.weights
     
     def get_expected_return(self):
+        """
+        Returns the expected return of the portfolio.
+        """
         return self.expected_return
     
     def get_volatility(self):
+        """
+        Returns the volatility of the portfolio.
+        """
         return self.volatility
     
     def get_sharpe_ratio(self):
+        """
+        Returns the Sharpe ratio of the portfolio.
+        """
         return self.sharpe_ratio
     
     @staticmethod
     def evaluate_solution(array):
+        """
+        Evaluates a swarm of portfolios and returns a DataFrame with the computed metrics.
+        
+        Parameters:
+        array : list of Portfolio instances
+            The swarm of portfolios to evaluate.
+        """
         # Convert swarm (array of Portfolio instances) into a DataFrame with computed metrics
         exp_returns = [p.get_expected_return() for p in array]
         volatilities = [p.get_volatility() for p in array]

@@ -49,7 +49,7 @@ class Particle_Swarm_Optimisation:
         self.best_overall_fitness = []
         self.swarm_mean = []
 
-    def run(self, iterations, metric):
+    def run(self, iterations, metric, convergence_threshold=1e-6, convergence_window=100):
         # Initialize overall best tracking.
         if metric == 'volatility':
             self.overall_best_portfolio_metric = float('inf')
@@ -102,6 +102,13 @@ class Particle_Swarm_Optimisation:
                     # print("---------------")
                 else:
                     self.best_overall_fitness.append(self.best_overall_fitness[-1])
+                # Check convergence: if improvement over the last 'window' iterations is below convergence_threshold.
+            
+            if len(self.best_overall_fitness) >= convergence_window:
+                recent_changes = np.abs(np.diff(self.best_overall_fitness[-convergence_window:]))
+                if np.all(recent_changes < convergence_threshold):
+                    print(f"Convergence achieved at iteration {i + 1}")
+                    break
         return None
 
     def set_fitness(self, metric):

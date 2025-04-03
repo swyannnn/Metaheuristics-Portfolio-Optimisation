@@ -21,7 +21,7 @@ class Genetic_algorithm:
         self.overall_best_metric = []
         return None
     
-    def run(self, max_generations, metric):
+    def run(self, max_generations, metric, convergence_threshold=1e-6, convergence_window=100):
         self.initialize()
 
         for i in range(max_generations):
@@ -64,6 +64,13 @@ class Genetic_algorithm:
             self.crossover() # selection() is called in this function
             self.mutation()
             self.replacement(metric)
+
+            # Check convergence: if improvement over the last 'window' iterations is below convergence_threshold.
+            if len(self.overall_best_metric) >= convergence_window:
+                recent_changes = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
+                if np.all(recent_changes < convergence_threshold):
+                    print(f"Convergence achieved at iteration {i + 1}")
+                    break
         return None
     
     def initialize(self):

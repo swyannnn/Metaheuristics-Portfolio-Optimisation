@@ -67,57 +67,65 @@ class Simulated_Annealing:
         new_solution.set_weights(new_weights)
         return new_solution
 
-    def run(self, iterations, metric):
+    def run(self, max_iterations, metric, convergence_threshold=1e-6, convergence_window=100):
         """
-        Run the Simulated Annealing algorithm for a number of iterations.
-        :param iterations: Number of iterations to run.
-        :param metric: The metric metric to optimize ('volatility', 'return', or 'sharpe_ratio').
+        Run the Simulated Annealing algorithm for a given number of iterations,
+        stopping early if the performance metric converges.
+        c
+        :param max_iterations: Maximum number of iterations to run.
+        :param metric: The performance metric to optimize ('volatility', 'return', or 'sharpe_ratio').
+        :param convergence_threshold: Convergence threshold for improvement (e.g., 0.001).
+        :param window: Number of consecutive iterations to consider for convergence.
         """
-        self.max_iterations = iterations
-        for _ in range(iterations):
-            # Generate a neighboring solution by perturbation.
+        self.max_iterations = max_iterations
+        self.iteration = 0
+        # Initialize current solution as the first solution
+        # (Assuming self.current_solution is defined elsewhere; otherwise, set it to an initial portfolio)
+        
+        for i in range(max_iterations):
+            # Evaluate current and new solutions
             new_solution = self.perturb_solution(self.current_solution)
-            
-            # Calculate metric values for current and new solutions.
             current_obj = Portfolio.evaluate_solution([self.current_solution])
             current_metric = current_obj[metric][0]
             new_obj = Portfolio.evaluate_solution([new_solution])
             new_metric = new_obj[metric][0]
-            
+
             # Store the current metric in current_fitness
             self.current_fitness.append(current_metric)
-
-            # Compute the change in metric (delta)
+            
+            # Compute the change in metric
             delta = new_metric - current_metric
+            
+            # Acceptance rule: if new solution is better, or accept with a probability if worse.
 
-            # Decide whether to accept the new solution if it is better or with some probability if it is worse.
-            r = np.random.rand()
-            if self.best_solution is None or len(self.overall_best_metric) == 0:
-                # First iteration: accept the first solution.
-                self.best_solution = new_solution
-                self.overall_best_metric.append(new_metric)
+            # If first iteration, initialize best_solution and best metric
+            if self.iteration == 0:
+                self.best_solution = self.current_solution
+                self.overall_best_metric.append(current_metric)
             else:
-                # If the new solution is better, accept it. Or if the new solution is worse, accept it with a probability based on the temperature.
+                r = np.random.rand()
                 if delta > 0 or r < np.exp(delta / self.temperature):
                     self.current_solution = new_solution
-                    # Update best solution.
+                    # Update overall best if new metric is better.
                     if new_metric > self.overall_best_metric[-1]:
-                        # print("New best solution found at iteration", self.iteration, "with fitness", new_obj)
-                        # print("New weights:", new_solution.get_weights())
-                        # print(f"New {metric}:", new_solution.get_sharpe_ratio())
-                        # print()
-                        self.overall_best_metric.append(new_metric)
                         self.best_solution = new_solution
-                    else: 
-                        # New solution is worse but accepted.
+                        self.overall_best_metric.append(new_metric)
+                    else:
                         self.overall_best_metric.append(self.overall_best_metric[-1])
                 else:
-                    # New solution is worse and not accepted.
                     self.overall_best_metric.append(self.overall_best_metric[-1])
             
-            # Cool down the temperature.
+            # Update temperature and iteration count.
             self.temperature = self.adjust_temperature()
             self.iteration += 1
+
+            # Check convergence: if improvement over the last 'window' iterations is below convergence_threshold.
+            if len(self.overall_best_metric) >= convergence_window:
+                recent_changes = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
+                if np.all(recent_changes < convergence_threshold):
+                    print(f"Convergence achieved at iteration {i + 1}")
+                    break
+            
         return None
     
     def get_best_solution(self):
@@ -147,7 +155,6 @@ class Simulated_Annealing:
         Returns a DataFrame with the best and current fitness values at each iteration.
         """
         analysis_df = pd.DataFrame({
-            'iteration': range(self.iteration),
             'best_fitness': self.overall_best_metric,
             'current_fitness': self.current_fitness,
             'temperature': self.current_temperature

@@ -19,6 +19,8 @@ def main(config):
     min_weight = config.get("min_weight", 0.01)
     metric = config.get("metric", "sharpe_ratio")
     max_iterations = config.get("max_iterations", 1000)
+    convergence_threshold = config.get("convergence_threshold", 1e-6)
+    convergence_window = config.get("convergence_window", 100)
 
     data_folder = config.get("stock_data_path", "data")
     data_folder = os.path.join(os.path.dirname(__file__), config.stock_data_path)
@@ -40,24 +42,16 @@ def main(config):
     run_ga = True
     run_pso = True
     run_sa = True
-    run_markowitz = True
+    run_markowitz = False
     
     # --- Genetic Algorithm ---
     if run_ga:
         start = time.time()
         ga_config = config.get("Genetic_Algorithm", {})
         GA = Genetic_algorithm(monthly_returns, corr_matrix, risk_free_rate, min_weight, ga_config)
-        GA.run(max_iterations, metric)
+        GA.run(max_iterations, metric, convergence_threshold, convergence_window)
         best_ga = GA.overall_best_portfolio
         end = time.time()
-        print("Genetic Algorithm Best Portfolio:")
-        logger.info("Genetic Algorithm Best Portfolio:")
-        logger.info("Weights: {}".format(best_ga.get_weights()))
-        logger.info("Sharpe Ratio: {}".format(best_ga.get_sharpe_ratio()))
-        logger.info("Expected Return: {}".format(best_ga.get_expected_return()))
-        logger.info("Volatility: {}".format(best_ga.get_volatility()))
-        logger.info("Execution Time: {:.2f} seconds".format(end - start))
-        logger.info("---------------")
 
         # Log GA analysis metrics to TensorBoard
         try:
@@ -68,21 +62,23 @@ def main(config):
         except Exception as e:
             print("GA get_analysis() not available:", e)
 
+        logger.info("Genetic Algorithm Best Portfolio:")
+        logger.info(f"Convergence criteria met at iteration {len(ga_analysis)}")
+        logger.info("Weights: {}".format(best_ga.get_weights()))
+        logger.info("Sharpe Ratio: {}".format(best_ga.get_sharpe_ratio()))
+        logger.info("Expected Return: {}".format(best_ga.get_expected_return()))
+        logger.info("Volatility: {}".format(best_ga.get_volatility()))
+        logger.info("Execution Time: {:.2f} seconds".format(end - start))
+        logger.info("---------------")
+
     # --- Particle Swarm Optimization ---
     if run_pso:
         start = time.time()
         pso_config = config.get("Particle_Swarm_Optimization", {})
         PSO = Particle_Swarm_Optimisation(monthly_returns, corr_matrix, risk_free_rate, min_weight, pso_config)
-        PSO.run(max_iterations, metric)
+        PSO.run(max_iterations, metric, convergence_threshold, convergence_window)
         best_pso = PSO.overall_best_portfolio
         end = time.time()
-        logger.info("Particle Swarm Optimization Best Portfolio:")
-        logger.info("Weights: {}".format(best_pso.get_weights()))
-        logger.info("Sharpe Ratio: {}".format(best_pso.get_sharpe_ratio()))
-        logger.info("Expected Return: {}".format(best_pso.get_expected_return()))
-        logger.info("Volatility: {}".format(best_pso.get_volatility()))
-        logger.info("Execution Time: {:.2f} seconds".format(end - start))
-        logger.info("---------------")
 
         # Log PSO analysis metrics to TensorBoard
         try:
@@ -92,22 +88,24 @@ def main(config):
                 writer.add_scalar('Particle_Swarm_Optimisation/mean_fitness', row['mean_fitness'], i)
         except Exception as e:
             print("PSO get_analysis() not available:", e)
+
+        logger.info("Particle Swarm Optimization Best Portfolio:")
+        logger.info(f"Convergence criteria met at iteration {len(pso_analysis)}")
+        logger.info("Weights: {}".format(best_pso.get_weights()))
+        logger.info("Sharpe Ratio: {}".format(best_pso.get_sharpe_ratio()))
+        logger.info("Expected Return: {}".format(best_pso.get_expected_return()))
+        logger.info("Volatility: {}".format(best_pso.get_volatility()))
+        logger.info("Execution Time: {:.2f} seconds".format(end - start))
+        logger.info("---------------")
     
     # # --- Simulated Annealing ---
     if run_sa:
         start = time.time()
         sa_config = config.get("Simulated_Annealing", {})
         SA = Simulated_Annealing(monthly_returns, corr_matrix, risk_free_rate, min_weight, sa_config)
-        SA.run(max_iterations, metric)
+        SA.run(max_iterations, metric, convergence_threshold, convergence_window)
         best_sa = SA.get_best_solution()
         end = time.time()
-        logger.info("Simulated Annealing Best Portfolio:")
-        logger.info("Weights: {}".format(best_sa.get_weights()))
-        logger.info("Sharpe Ratio: {}".format(best_sa.get_sharpe_ratio()))
-        logger.info("Expected Return: {}".format(best_sa.get_expected_return()))
-        logger.info("Volatility: {}".format(best_sa.get_volatility()))
-        logger.info("Execution Time: {:.2f} seconds".format(end - start))
-        logger.info("---------------")
 
         # Log SA analysis metrics to TensorBoard
         try:
@@ -118,6 +116,15 @@ def main(config):
                 writer.add_scalar('Simulated_Annealing/temperature', row['temperature'], i)
         except Exception as e:
             print("SA get_analysis() not available:", e)
+
+        logger.info("Simulated Annealing Best Portfolio:")
+        logger.info(f"Convergence criteria met at iteration {len(sa_analysis)}")
+        logger.info("Weights: {}".format(best_sa.get_weights()))
+        logger.info("Sharpe Ratio: {}".format(best_sa.get_sharpe_ratio()))
+        logger.info("Expected Return: {}".format(best_sa.get_expected_return()))
+        logger.info("Volatility: {}".format(best_sa.get_volatility()))
+        logger.info("Execution Time: {:.2f} seconds".format(end - start))
+        logger.info("---------------")
     
     # --- Markowitz Optimization ---
     if run_markowitz:
@@ -146,5 +153,5 @@ def main(config):
     writer.close()
 
 if __name__ == "__main__":
-    for _ in range(10):
+    for _ in range(30):
         main()

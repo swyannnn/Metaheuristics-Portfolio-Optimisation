@@ -28,6 +28,7 @@ class Simulated_Annealing:
         self.current_temperature = []
         self.overall_best_metric = []
         self.current_fitness = []
+        self.best_history = []
         self.iteration = 0
 
     def perturb_solution(self, solution):
@@ -89,6 +90,10 @@ class Simulated_Annealing:
             current_metric = current_obj[metric][0]
             new_obj = Portfolio.evaluate_solution([new_solution])
             new_metric = new_obj[metric][0]
+
+            # Store the best portfolio's volatility and expected return.
+            self.best_history.append((new_solution.get_volatility(),
+                    new_solution.get_expected_return()))
 
             # Store the current metric in current_fitness
             self.current_fitness.append(current_metric)

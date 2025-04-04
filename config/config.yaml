@@ -1,11 +1,17 @@
 tickers: ['AAPL', 'AMZN', 'GOOG', 'META', "NFLX"]
 stock_data_path: "./data/"
-max_iterations: 10000
+max_iterations: 1000
 convergence_threshold: 1e-6
 convergence_window: 100
-risk_free_rate: 0.08877 # (in decimal, not percentage), got this value by averaging the risk-free rates of the time period 2014.01.01 to 2019.12.31, refer to c
+risk_free_rate: 0.08877 # (in decimal, not percentage), got this value by averaging the risk-free rates of the time period 2014.01.01 to 2019.12.31, refer to https://fred.stlouisfed.org/series/DTB3
 min_weight: 0.01
 metric: 'sharpe_ratio' # 'sharpe_ratio', 'return', 'volatility'
+
+# Flags to control which algorithms to run
+# Set to True to run the corresponding algorithm, False to skip it
+run_ga: True
+run_sa: True
+run_pso: True
 
 Simulated_Annealing:
   initial_temperature: 100
@@ -29,7 +35,4 @@ Genetic_Algorithm:
   mutation_rate: 0.01 # should be small, better 1/self.stock_num
   replacement_method: 'elitism' # 'elitism', 'generational'
 
-Ant_Colony_Optimization:
-  num_ants: 10
 
-Markowitz_Model:

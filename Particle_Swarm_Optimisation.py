@@ -48,6 +48,7 @@ class Particle_Swarm_Optimisation:
         self.tree.append(self.swarm.copy())
         self.best_overall_fitness = []
         self.swarm_mean = []
+        self.best_history = []
 
     def run(self, iterations, metric, convergence_threshold=1e-6, convergence_window=100):
         # Initialize overall best tracking.
@@ -71,6 +72,10 @@ class Particle_Swarm_Optimisation:
 
             # Get the best portfolio from the current iteration.
             current_best_portfolio = self.get_best_solution(metric)
+
+            # Store the best portfolio's volatility and expected return.
+            self.best_history.append((current_best_portfolio.get_volatility(),
+                    current_best_portfolio.get_expected_return()))
 
             if metric == 'volatility':
                 current_metric = - current_best_portfolio.get_volatility()

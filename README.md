@@ -38,3 +38,6 @@ Enter this command in terminal:
 tensorboard --logdir "outputs"
 ```
 Then visit the localhost stated in terminal.
+
+## What output you can expect to see:
+In output folder, you can see the comparison of EF and the overlay plots of respective algorithm's best portfolios.

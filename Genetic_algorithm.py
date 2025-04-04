@@ -19,6 +19,7 @@ class Genetic_algorithm:
         self.replacement_method = ga_config.get("replacement_method", 'elitism')
         self.overall_best_portfolio = None
         self.overall_best_metric = []
+        self.best_history = []
         return None
     
     def run(self, max_generations, metric, convergence_threshold=1e-6, convergence_window=100):
@@ -31,7 +32,11 @@ class Genetic_algorithm:
 
             # Get the best portfolio from the current generation.
             current_best_portfolio = self.get_best_porfolio(metric)
-            
+
+            # Store the best portfolio's volatility and expected return.
+            self.best_history.append((current_best_portfolio.get_volatility(),
+                    current_best_portfolio.get_expected_return()))
+
             # Get the metric for the best portfolio.
             if metric == 'volatility':
                 current_metric = current_best_portfolio.get_volatility()

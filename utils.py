@@ -1,8 +1,11 @@
 import os
 import sys
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
+from pypfopt.efficient_frontier import EfficientFrontier
 
 def load_stock_data(path):
     """
@@ -71,4 +74,64 @@ def setup_logger(config: DictConfig):
     logger.info(OmegaConf.to_yaml(config))
     return logger
 
+def gen_efficient_frontier(monthly_returns, risk_free_rate, min_weight):
+    mu = monthly_returns.mean() * 12
+    S = monthly_returns.cov() * 12
+    target_returns = np.linspace(mu.min(), mu.max(), num=50)
+    efficient_frontier = []
+    for target in target_returns:
+        try:
+            ef = EfficientFrontier(mu, S, weight_bounds=(min_weight, 1))
+            ef.efficient_return(target)
+            ret, vol, sr = ef.portfolio_performance(risk_free_rate=risk_free_rate, verbose=False)
+            efficient_frontier.append((vol, ret))
+        except Exception as e:
+            continue
 
+    efficient_frontier = np.array(efficient_frontier)
+    risk_frontier = efficient_frontier[:, 0]   # Volatility (risk)
+    return_frontier = efficient_frontier[:, 1] # Expected return
+    return risk_frontier, return_frontier
+
+def save_benchmark_img(risk_frontier, return_frontier, best_history, overall_best_volatility, overall_best_return, save_name):
+    # Plot Efficient Frontier and overlay heuristic best points
+    plt.figure(figsize=(8, 6))
+    plt.plot(risk_frontier, return_frontier, label="Efficient Frontier", color="blue", linewidth=2)
+
+    # choose color based on the save_name
+    try:
+        color = save_name.lower()
+        if save_name == "GA":
+            color = "red"
+        elif save_name == "PSO":
+            color = "orange"
+        elif save_name == "SA":
+            color = "purple"
+    except Exception as e:
+        logger.error(f"Error determining color for {save_name}: {e}")
+        color = "black"
+        
+    # Plot the best portfolios from the heuristic
+    if len(best_history) > 0:
+        print("len(GA_best_history):", len(best_history))
+        plt.scatter(best_history[:, 0], best_history[:, 1],
+                    label=f"{save_name} Best Portfolios", color=color, marker="o", s=10)
+        plt.plot(overall_best_volatility, overall_best_return,
+                 label=f"{save_name} Overall Best Portfolio", color="green", marker="*", markersize=10)
+    plt.xlabel("Risk (Volatility)")
+    plt.ylabel("Expected Return")
+    plt.title(f"Efficient Frontier vs. {save_name}")
+    plt.legend()
+    plt.tight_layout()
+
+    # Save the figure
+    plt.savefig(f"{save_name}.png", dpi=300)
+    plt.close()
+
+def calculate_tracking_error(portfolio_returns, benchmark_returns):
+    """
+    Calculate the Tracking Error (TE) as the standard deviation
+    of the difference between portfolio returns and benchmark returns.
+    """
+    diff = portfolio_returns - benchmark_returns
+    return np.std(diff, ddof=1)

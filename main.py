@@ -1,18 +1,17 @@
 import hydra
 import os
 import time
+import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from Genetic_algorithm import Genetic_algorithm
 from Particle_Swarm_Optimisation import Particle_Swarm_Optimisation
 from Simulated_Annealing import Simulated_Annealing
-from Markowitz_Model import Markowitz_Model
-from utils import setup_logger
-from utils import load_stock_data, compute_monthly_returns
+import utils
 
 @hydra.main(config_path=os.path.join(os.path.dirname(__file__), "config"), config_name="config")
 def main(config):
     # setup logger
-    logger = setup_logger(config)
+    logger = utils.setup_logger(config)
     
     # Read global settings from config, or use defaults
     risk_free_rate = config.get("risk_free_rate", 0.02)
@@ -25,33 +24,45 @@ def main(config):
     data_folder = config.get("stock_data_path", "data")
     data_folder = os.path.join(os.path.dirname(__file__), config.stock_data_path)
     # Load daily prices using Adjusted Close
-    daily_prices = load_stock_data(data_folder)
+    daily_prices = utils.load_stock_data(data_folder)
     
     # Convert daily prices to monthly returns
-    monthly_returns = compute_monthly_returns(daily_prices)
+    monthly_returns = utils.compute_monthly_returns(daily_prices)
+
+    # Compute benchmark returns (equal-weighted portfolio)
+    benchmark_weights = np.ones(monthly_returns.shape[1]) / monthly_returns.shape[1]
+    benchmark_returns = monthly_returns.dot(benchmark_weights)
     
     # Compute correlation matrix from monthly returns
     corr = monthly_returns.corr()
     corr_matrix = corr.values
 
+    # set up efficient frontier
+    risk_frontier, return_frontier = utils.gen_efficient_frontier(monthly_returns, risk_free_rate, min_weight)
+
     # Set up TensorBoard SummaryWriter
     writer = SummaryWriter(log_dir="logs")
 
-    # Flags to control which algorithms to run
-    # Set to True to run the corresponding algorithm, False to skip it
-    run_ga = True
-    run_pso = True
-    run_sa = True
-    run_markowitz = False
-    
+    # Flags to control which algorithms to run, default to False
+    run_ga = config.get("run_ga", False)
+    run_pso = config.get("run_pso", False)
+    run_sa = config.get("run_sa", False)
+
     # --- Genetic Algorithm ---
     if run_ga:
         start = time.time()
         ga_config = config.get("Genetic_Algorithm", {})
         GA = Genetic_algorithm(monthly_returns, corr_matrix, risk_free_rate, min_weight, ga_config)
         GA.run(max_iterations, metric, convergence_threshold, convergence_window)
-        best_ga = GA.overall_best_portfolio
         end = time.time()
+
+        best_ga = GA.overall_best_portfolio
+        best_ga_weights = best_ga.get_weights()  # e.g., an array of shape (n_assets,)
+        portfolio_returns = monthly_returns.dot(best_ga_weights)
+        ga_te = utils.calculate_tracking_error(portfolio_returns, benchmark_returns)
+
+        GA_best_history = np.array(GA.best_history)
+        utils.save_benchmark_img(risk_frontier, return_frontier, GA_best_history, best_ga.get_volatility(), best_ga.get_expected_return(), "GA")
 
         # Log GA analysis metrics to TensorBoard
         try:
@@ -68,17 +79,25 @@ def main(config):
         logger.info("Sharpe Ratio: {}".format(best_ga.get_sharpe_ratio()))
         logger.info("Expected Return: {}".format(best_ga.get_expected_return()))
         logger.info("Volatility: {}".format(best_ga.get_volatility()))
+        logger.info("Tracking Error: {}".format(ga_te))
         logger.info("Execution Time: {:.2f} seconds".format(end - start))
         logger.info("---------------")
-
+        
     # --- Particle Swarm Optimization ---
     if run_pso:
         start = time.time()
         pso_config = config.get("Particle_Swarm_Optimization", {})
         PSO = Particle_Swarm_Optimisation(monthly_returns, corr_matrix, risk_free_rate, min_weight, pso_config)
         PSO.run(max_iterations, metric, convergence_threshold, convergence_window)
-        best_pso = PSO.overall_best_portfolio
         end = time.time()
+
+        best_pso = PSO.overall_best_portfolio
+        best_pso_weights = best_pso.get_weights()  # e.g., an array of shape (n_assets,)
+        portfolio_returns = monthly_returns.dot(best_pso_weights)
+        pso_te = utils.calculate_tracking_error(portfolio_returns, benchmark_returns)
+
+        PSO_best_history = np.array(PSO.best_history)
+        utils.save_benchmark_img(risk_frontier, return_frontier, PSO_best_history, best_pso.get_volatility(), best_pso.get_expected_return(), "PSO")
 
         # Log PSO analysis metrics to TensorBoard
         try:
@@ -95,6 +114,7 @@ def main(config):
         logger.info("Sharpe Ratio: {}".format(best_pso.get_sharpe_ratio()))
         logger.info("Expected Return: {}".format(best_pso.get_expected_return()))
         logger.info("Volatility: {}".format(best_pso.get_volatility()))
+        logger.info("Tracking Error: {}".format(pso_te))
         logger.info("Execution Time: {:.2f} seconds".format(end - start))
         logger.info("---------------")
     
@@ -104,8 +124,15 @@ def main(config):
         sa_config = config.get("Simulated_Annealing", {})
         SA = Simulated_Annealing(monthly_returns, corr_matrix, risk_free_rate, min_weight, sa_config)
         SA.run(max_iterations, metric, convergence_threshold, convergence_window)
-        best_sa = SA.get_best_solution()
         end = time.time()
+
+        best_sa = SA.get_best_solution()
+        best_sa_weights = best_sa.get_weights()  # e.g., an array of shape (n_assets,)
+        portfolio_returns = monthly_returns.dot(best_sa_weights)
+        sa_te = utils.calculate_tracking_error(portfolio_returns, benchmark_returns)
+
+        SA_best_history = np.array(SA.best_history)
+        utils.save_benchmark_img(risk_frontier, return_frontier, SA_best_history, best_sa.get_volatility(), best_sa.get_expected_return(), "SA")
 
         # Log SA analysis metrics to TensorBoard
         try:
@@ -123,35 +150,12 @@ def main(config):
         logger.info("Sharpe Ratio: {}".format(best_sa.get_sharpe_ratio()))
         logger.info("Expected Return: {}".format(best_sa.get_expected_return()))
         logger.info("Volatility: {}".format(best_sa.get_volatility()))
+        logger.info("Tracking Error: {}".format(sa_te))
         logger.info("Execution Time: {:.2f} seconds".format(end - start))
         logger.info("---------------")
-    
-    # --- Markowitz Optimization ---
-    if run_markowitz:
-        start = time.time()
-        # For Markowitz, compute expected returns and covariance matrix from monthly returns.
-        # Assume monthly_returns are in percentages; convert to decimals.
-        markowitz = Markowitz_Model(monthly_returns, corr_matrix, risk_free_rate, min_weight, metric, max_iterations)
-        optimal_weights, port_return, port_volatility, port_sharpe = markowitz.run()
-        end = time.time()
-        logger.info("Markowitz Optimization Portfolio:")
-        logger.info("Weights: {}".format(optimal_weights))
-        logger.info("Sharpe Ratio: {}".format(port_sharpe))
-        logger.info("Expected Return: {}".format(port_return))
-        logger.info("Volatility: {}".format(port_volatility))
-        logger.info("Execution Time: {:.2f} seconds".format(end - start))
-        logger.info("---------------")
-
-        # Log Markowitz analysis metrics to TensorBoard
-        try: 
-            writer.add_scalar('Markowitz_Model/return', port_return)
-            writer.add_scalar('Markowitz_Model/volatility', port_volatility)
-            writer.add_scalar('Markowitz_Model/sharpe_ratio', port_sharpe)
-        except Exception as e:
-            print("Markowitz get_analysis() not available:", e)
 
     writer.close()
 
 if __name__ == "__main__":
-    for _ in range(30):
+    for _ in range(1):
         main()

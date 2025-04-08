@@ -1,9 +1,9 @@
-tickers: ['AAPL', 'AMZN', 'GOOG', 'META', "NFLX"]
+tickers: ['AAPL', 'AMZN', 'GOOG', 'META', "NFLX", 'MSFT', 'TSLA', 'NVDA', 'AMD', 'INTC']
 stock_data_path: "./data/"
-max_iterations: 1000
+max_iterations: 10000
 convergence_threshold: 1e-6
 convergence_window: 100
-risk_free_rate: 0.08877 # (in decimal, not percentage), got this value by averaging the risk-free rates of the time period 2014.01.01 to 2019.12.31, refer to https://fred.stlouisfed.org/series/DTB3
+risk_free_rate: 0.8877 # (in percentage, not decimal), got this value by averaging the risk-free rates of the time period 2014.01.01 to 2019.12.31, refer to https://fred.stlouisfed.org/series/DTB3
 min_weight: 0.01
 metric: 'sharpe_ratio' # 'sharpe_ratio', 'return', 'volatility'
 
@@ -12,6 +12,7 @@ metric: 'sharpe_ratio' # 'sharpe_ratio', 'return', 'volatility'
 run_ga: True
 run_sa: True
 run_pso: True
+runs: 30 # Number of runs for each algorithm
 
 Simulated_Annealing:
   initial_temperature: 100

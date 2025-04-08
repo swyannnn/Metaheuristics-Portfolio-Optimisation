@@ -5,6 +5,9 @@ import copy
 from Portfolio import Portfolio
 
 class Genetic_algorithm:
+    """
+    A class to implement a genetic algorithm for portfolio optimization.
+    """
     def __init__(self, returns_df, corr_matrix, risk_free, min_weight, ga_config):
         self.returns = returns_df
         self.corr = corr_matrix
@@ -23,8 +26,15 @@ class Genetic_algorithm:
         return None
     
     def run(self, max_generations, metric, convergence_threshold=1e-6, convergence_window=100):
+        """
+        Run the genetic algorithm for a specified number of generations.
+        Args:
+            max_generations (int): Maximum number of generations to run.
+            metric (str): The objective metric, e.g., 'volatility', 'return', or 'sharpe_ratio'.
+            convergence_threshold (float): Threshold for convergence.
+            convergence_window (int): Number of generations to check for convergence.
+        """
         self.initialize()
-
         for i in range(max_generations):
             self.set_fitness(metric)
             # print the metric table
@@ -74,11 +84,13 @@ class Genetic_algorithm:
             if len(self.overall_best_metric) >= convergence_window:
                 recent_changes = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
                 if np.all(recent_changes < convergence_threshold):
-                    print(f"Convergence achieved at iteration {i + 1}")
                     break
         return None
     
     def initialize(self):
+        """
+        Initialize the population with random portfolios.
+        """
         self.population = []
         self.offspring = []
         self.population_best = []
@@ -90,6 +102,11 @@ class Genetic_algorithm:
         return None
     
     def set_fitness(self, metric):
+        """
+        Set the fitness of each portfolio in the population based on the specified metric.
+        Args:
+            metric (str): The objective metric, e.g., 'volatility', 'return', or 'sharpe_ratio'.
+        """
         if(metric == 'volatility'):
             max_volatility = self.population_df[metric].max()
             self.population_df.sort_values(by=metric, inplace=True, ascending=True)
@@ -305,12 +322,24 @@ class Genetic_algorithm:
         return None
     
     def get_best_porfolio(self, metric):
+        """
+        Get the best portfolio from the population based on the specified metric.
+        Args:
+            metric (str): The objective metric, e.g., 'volatility', 'return', or 'sharpe_ratio'.
+        Returns:
+            Portfolio: The best portfolio object.
+        """
         order = False if metric == 'volatility' else True
         self.population_df.sort_values(by=metric, inplace=True, ascending=order)
         idx = self.population_df.head(1).index.values[0]
         return self.population[idx]
 
     def get_analysis(self):
+        """
+        Get the analysis of the genetic algorithm run.
+        Returns:
+            pd.DataFrame: DataFrame containing the best fitness and mean fitness of the population.
+        """
         d = {'best_fitness':self.overall_best_metric,'mean_fitness':self.population_mean}
         output = pd.DataFrame(data=d) 
         return output

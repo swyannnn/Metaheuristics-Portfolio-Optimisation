@@ -51,6 +51,13 @@ class Particle_Swarm_Optimisation:
         self.best_history = []
 
     def run(self, iterations, metric, convergence_threshold=1e-6, convergence_window=100):
+        """
+        Run the PSO algorithm for a specified number of iterations.
+        :param iterations: Number of iterations to run the PSO algorithm.
+        :param metric: Metric to optimize ('volatility', 'return', 'sharpe_ratio').
+        :param convergence_threshold: Threshold for convergence.
+        :param convergence_window: Number of iterations to consider for convergence.
+        """
         # Initialize overall best tracking.
         if metric == 'volatility':
             self.overall_best_portfolio_metric = float('inf')
@@ -112,7 +119,6 @@ class Particle_Swarm_Optimisation:
             if len(self.best_overall_fitness) >= convergence_window:
                 recent_changes = np.abs(np.diff(self.best_overall_fitness[-convergence_window:]))
                 if np.all(recent_changes < convergence_threshold):
-                    print(f"Convergence achieved at iteration {i + 1}")
                     break
         return None
 
@@ -121,6 +127,9 @@ class Particle_Swarm_Optimisation:
         Evaluate fitness for each particle.
         For 'volatility', lower is better; for 'return' or 'sharpe_ratio', higher is better.
         This function will add a 'fitness' column to the swarm DataFrame.
+
+        :param metric: Metric to optimize ('volatility', 'return', 'sharpe_ratio').
+        :return: None
         """
         # If the metric is not the allowed metrics, raise an error.
         if metric not in ['volatility','return','sharpe_ratio']:
@@ -177,6 +186,8 @@ class Particle_Swarm_Optimisation:
     def get_best_solution(self, metric):
         """
         Return the best portfolio in the swarm based on the specified metric.
+        :param metric: Metric to optimize ('volatility', 'return', 'sharpe_ratio').
+        :return: Best portfolio (Portfolio instance).
         """
 
         # If the metric is not the allowed metrics, raise an error.
@@ -195,6 +206,10 @@ class Particle_Swarm_Optimisation:
         return self.tree
 
     def get_analysis(self):
+        """
+        Return a DataFrame with the best fitness and mean fitness over iterations.
+        :return: DataFrame with best fitness and mean fitness.
+        """
         # Create a DataFrame with best fitness and mean fitness over iterations.
         d = {'best_fitness': self.best_overall_fitness, 'mean_fitness': self.swarm_mean}
         output = pd.DataFrame(data=d)

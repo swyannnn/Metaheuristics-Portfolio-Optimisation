@@ -35,9 +35,16 @@ Replace `path/to/AIM` to your desired path.
 
 Enter this command in terminal:
 ```
-tensorboard --logdir "outputs"
+tensorboard --logdir "outputs" --port 8000
 ```
-Then visit the localhost stated in terminal.
+The tensorboard should start on port 6007. Open your browser and navigate to http://localhost:8000/ to access the application.
+
+You can expect to see the best fitness plots of wach algorithms.
 
 ## What output you can expect to see:
-In output folder, you can see the comparison of EF and the overlay plots of respective algorithm's best portfolios.
+In `./outputs` folder, you can see 
+
+1) the comparison of EF and the overlay plots of respective algorithm's best portfolios. Namely `GA.png`, `SA.png`, `PSO.png`
+
+2) Violin plot of the Tracking Error. Namely `annotated_violin_plot.png`
+

@@ -36,6 +36,8 @@ class Simulated_Annealing:
         Generate a new solution by perturbing only two weights, while keeping the others unchanged.
         This strategy ensures that the two modified weights still sum to their original total,
         and that each weight is at least min_weight.
+        :param solution: Current Portfolio solution to be perturbed.
+        :return: A new Portfolio instance with modified weights.
         """
         # Create a new Portfolio instance to store the perturbed solution.
         new_solution = Portfolio(self.returns, self.corr, self.risk_free, self.min_weight)
@@ -128,12 +130,14 @@ class Simulated_Annealing:
             if len(self.overall_best_metric) >= convergence_window:
                 recent_changes = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
                 if np.all(recent_changes < convergence_threshold):
-                    print(f"Convergence achieved at iteration {i + 1}")
                     break
             
         return None
     
     def get_best_solution(self):
+        """
+        Return the best solution found during the simulated annealing process.
+        """
         return self.best_solution
 
     def adjust_temperature(self):

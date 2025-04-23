@@ -246,9 +246,9 @@ def save_weights_plot(tickers, ga_avg_weights, pso_avg_weights, sa_avg_weights):
 
     fig, ax = plt.subplots(figsize=(8, 6))
     rects1 = ax.bar(x - bar_width*1.5, benchmark_weights, bar_width, label='Benchmark', color='blue', alpha=0.3)
-    rects2 = ax.bar(x - bar_width/2, ga_avg_weights, bar_width, label='GA', color='red', alpha=0.3)
-    rects3 = ax.bar(x + bar_width/2, pso_avg_weights, bar_width, label='PSO', color='orange', alpha=0.3)
-    rects4 = ax.bar(x + bar_width*1.5, sa_avg_weights, bar_width, label='SA', color='purple', alpha=0.3)
+    rects2 = ax.bar(x - bar_width/2, ga_avg_weights*100, bar_width, label='GA', color='red', alpha=0.3)
+    rects3 = ax.bar(x + bar_width/2, pso_avg_weights*100, bar_width, label='PSO', color='orange', alpha=0.3)
+    rects4 = ax.bar(x + bar_width*1.5, sa_avg_weights*100, bar_width, label='SA', color='purple', alpha=0.3)
 
     ax.set_xlabel('Asset Name')
     ax.set_ylabel('Asset Weight (%)')

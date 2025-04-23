@@ -70,22 +70,20 @@ class Simulated_Annealing:
         new_solution.set_weights(new_weights)
         return new_solution
 
-    def run(self, max_iterations, metric, convergence_threshold=1e-6, convergence_window=100):
+    def run(self, metric, convergence_threshold=1e-6, convergence_window=100):
         """
         Run the Simulated Annealing algorithm for a given number of iterations,
         stopping early if the performance metric converges.
         c
-        :param max_iterations: Maximum number of iterations to run.
         :param metric: The performance metric to optimize ('volatility', 'return', or 'sharpe_ratio').
         :param convergence_threshold: Convergence threshold for improvement (e.g., 0.001).
         :param window: Number of consecutive iterations to consider for convergence.
         """
-        self.max_iterations = max_iterations
         self.iteration = 0
         # Initialize current solution as the first solution
         # (Assuming self.current_solution is defined elsewhere; otherwise, set it to an initial portfolio)
-        
-        for i in range(max_iterations):
+        convergence_met = False
+        while not convergence_met:
             # Evaluate current and new solutions
             new_solution = self.perturb_solution(self.current_solution)
             current_obj = Portfolio.evaluate_solution([self.current_solution])
@@ -130,7 +128,7 @@ class Simulated_Annealing:
             if len(self.overall_best_metric) >= convergence_window:
                 recent_changes = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
                 if np.all(recent_changes < convergence_threshold):
-                    break
+                    convergence_met = True
             
         return None
     

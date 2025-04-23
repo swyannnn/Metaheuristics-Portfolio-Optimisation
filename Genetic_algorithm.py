@@ -25,21 +25,19 @@ class Genetic_algorithm:
         self.best_history = []
         return None
     
-    def run(self, max_generations, metric, convergence_threshold=1e-6, convergence_window=100):
+    def run(self, metric, convergence_threshold=1e-6, convergence_window=100):
         """
         Run the genetic algorithm for a specified number of generations.
         Args:
-            max_generations (int): Maximum number of generations to run.
             metric (str): The objective metric, e.g., 'volatility', 'return', or 'sharpe_ratio'.
             convergence_threshold (float): Threshold for convergence.
             convergence_window (int): Number of generations to check for convergence.
         """
         self.initialize()
-        for i in range(max_generations):
+        convergence_met = False
+        iteration = 1
+        while not convergence_met:
             self.set_fitness(metric)
-            # print the metric table
-            # print(self.population_df)
-
             # Get the best portfolio from the current generation.
             current_best_portfolio = self.get_best_porfolio(metric)
 
@@ -68,10 +66,10 @@ class Genetic_algorithm:
                    (metric != 'volatility' and current_metric > self.overall_best_metric[-1]):
                     self.overall_best_portfolio = copy.deepcopy(current_best_portfolio)
                     self.overall_best_metric.append(current_metric)
-                    # print("Improved current_metric", current_metric)
-                    # print(f"New Overall Best Portfolio Found at Generation {i+1}!")
-                    # print("Weights:", current_best_portfolio.get_weights())
-                    # print("---------------")
+                    print("Improved current_metric", current_metric)
+                    print(f"New Overall Best Portfolio Found at Generation {iteration+1}!")
+                    print("Weights:", current_best_portfolio.get_weights())
+                    print("---------------")
                 else: 
                     # append the previous best
                     self.overall_best_metric.append(self.overall_best_metric[-1])
@@ -84,7 +82,8 @@ class Genetic_algorithm:
             if len(self.overall_best_metric) >= convergence_window:
                 recent_changes = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
                 if np.all(recent_changes < convergence_threshold):
-                    break
+                    convergence_met = True
+            iteration += 1
         return None
     
     def initialize(self):
@@ -123,7 +122,7 @@ class Genetic_algorithm:
             )
         return self.population_df
 
-    def selection(self, parent_num = 2):
+    def selection(self):
         """
         Select a certain number of parents from the current population using the specified selection method.
         Args:

@@ -1,6 +1,5 @@
-tickers: ['AAPL', 'AMZN', 'GOOG', 'META', "NFLX", 'MSFT', 'TSLA', 'NVDA', 'AMD', 'INTC']
+tickers: ["JPM", "BAC", "JNJ", "PFE", "PG", "KO", "XOM", "CVX", "BA", "CAT"]
 stock_data_path: "./data/"
-max_iterations: 10000
 convergence_threshold: 1e-6
 convergence_window: 100
 risk_free_rate: 0.8877 # (in percentage, not decimal), got this value by averaging the risk-free rates of the time period 2014.01.01 to 2019.12.31, refer to https://fred.stlouisfed.org/series/DTB3
@@ -9,10 +8,10 @@ metric: 'sharpe_ratio' # 'sharpe_ratio', 'return', 'volatility'
 
 # Flags to control which algorithms to run
 # Set to True to run the corresponding algorithm, False to skip it
-run_ga: True
-run_sa: True
+run_ga: False
+run_sa: False
 run_pso: True
-runs: 30 # Number of runs for each algorithm
+runs: 10 # Number of runs for each algorithm
 
 Simulated_Annealing:
   initial_temperature: 100

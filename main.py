@@ -63,7 +63,7 @@ def main(config):
             start = time.time()
             ga_config = config.get("Genetic_Algorithm", {})
             GA = Genetic_algorithm(monthly_returns, corr_matrix, risk_free_rate, min_weight, ga_config)
-            GA.run(max_iterations, metric, convergence_threshold, convergence_window)
+            GA.run(metric, convergence_threshold, convergence_window)
             end = time.time()
 
             best_ga = GA.overall_best_portfolio
@@ -112,7 +112,7 @@ def main(config):
             start = time.time()
             pso_config = config.get("Particle_Swarm_Optimization", {})
             PSO = Particle_Swarm_Optimisation(monthly_returns, corr_matrix, risk_free_rate, min_weight, pso_config)
-            PSO.run(max_iterations, metric, convergence_threshold, convergence_window)
+            PSO.run(metric, convergence_threshold, convergence_window)
             end = time.time()
 
             best_pso = PSO.overall_best_portfolio
@@ -160,7 +160,7 @@ def main(config):
             start = time.time()
             sa_config = config.get("Simulated_Annealing", {})
             SA = Simulated_Annealing(monthly_returns, corr_matrix, risk_free_rate, min_weight, sa_config)
-            SA.run(max_iterations, metric, convergence_threshold, convergence_window)
+            SA.run(metric, convergence_threshold, convergence_window)
             end = time.time()
 
             best_sa = SA.get_best_solution()
@@ -199,46 +199,62 @@ def main(config):
             logger.info("Execution Time: {:.2f} seconds".format(end - start))
             logger.info("---------------\n")
 
-    # Save the violin plot
-    utils.tracking_error_violin_plot(tracking_error_sa, tracking_error_ga, tracking_error_pso)
+    # log the time used for each algorithm
+    if run_ga:
+        weights_array_ga = np.array(all_best_portfolio_weights_ga)
+        average_weights_ga = np.mean(weights_array_ga, axis=0)
+        std_weights_ga = np.std(weights_array_ga, axis=0)
+        logger.info(f"Mean time used for GA: {np.mean(time_used_ga):.2f} seconds")
+        logger.info(f"Standard Deviation time used for GA: {np.std(time_used_ga):.2f} seconds")
+        logger.info(f"Mean tracking error for GA: {np.mean(tracking_error_ga):.2f}%")
+        logger.info(f"Mean convergence iterations for GA: {np.mean(convergence_iterations_ga):.2f}")
+        logger.info(f"Standard Deviation convergence iterations for GA: {np.std(convergence_iterations_ga):.2f}")
 
-    # Save the weights of the best portfolios
-    weights_array_ga = np.array(all_best_portfolio_weights_ga)
-    weights_array_pso = np.array(all_best_portfolio_weights_pso)
-    weights_array_sa = np.array(all_best_portfolio_weights_sa)
-    average_weights_ga = np.mean(weights_array_ga, axis=0)
-    average_weights_pso = np.mean(weights_array_pso, axis=0)
-    average_weights_sa = np.mean(weights_array_sa, axis=0)
-    std_weights_ga = np.std(weights_array_ga, axis=0)
-    std_weights_pso = np.std(weights_array_pso, axis=0)
-    std_weights_sa = np.std(weights_array_sa, axis=0)
+    if run_pso:
+        weights_array_pso = np.array(all_best_portfolio_weights_pso)
+        average_weights_pso = np.mean(weights_array_pso, axis=0)
+        std_weights_pso = np.std(weights_array_pso, axis=0)
+        logger.info(f"Mean time used for PSO: {np.mean(time_used_pso):.2f} seconds")
+        logger.info(f"Standard Deviation time used for PSO: {np.std(time_used_pso):.2f} seconds")
+        logger.info(f"Mean tracking error for PSO: {np.mean(tracking_error_pso):.2f}%")
+        logger.info(f"Mean convergence iterations for PSO: {np.mean(convergence_iterations_pso):.2f}")
+        logger.info(f"Standard Deviation convergence iterations for PSO: {np.std(convergence_iterations_pso):.2f}")
+
+    if run_sa:
+        weights_array_sa = np.array(all_best_portfolio_weights_sa)
+        average_weights_sa = np.mean(weights_array_sa, axis=0)
+        std_weights_sa = np.std(weights_array_sa, axis=0)
+        logger.info(f"Mean time used for SA: {np.mean(time_used_sa):.2f} seconds")
+        logger.info(f"Standard Deviation time used for SA: {np.std(time_used_sa):.2f} seconds")
+        logger.info(f"Mean tracking error for SA: {np.mean(tracking_error_sa):.2f}%")
+        logger.info(f"Mean convergence iterations for SA: {np.mean(convergence_iterations_sa):.2f}")
+        logger.info(f"Standard Deviation convergence iterations for SA: {np.std(convergence_iterations_sa):.2f}")
+
     n_assets = len(tickers)
     for i in range(n_assets):
-        logger.info(f"GA: {tickers[i]}: {average_weights_ga[i]:.2f} ± {std_weights_ga[i]:.2f}")
-        logger.info(f"PSO: {tickers[i]}: {average_weights_pso[i]:.2f} ± {std_weights_pso[i]:.2f}")
-        logger.info(f"SA: {tickers[i]}: {average_weights_sa[i]:.2f} ± {std_weights_sa[i]:.2f}")
-    utils.save_weights_plot(tickers, average_weights_ga, average_weights_sa, average_weights_pso)
+        if run_ga:
+            logger.info(f"GA: {tickers[i]}: {average_weights_ga[i]:.2f} ± {std_weights_ga[i]:.2f}")
+        if run_pso:
+            logger.info(f"PSO: {tickers[i]}: {average_weights_pso[i]:.2f} ± {std_weights_pso[i]:.2f}")
+        if run_sa:
+            logger.info(f"SA: {tickers[i]}: {average_weights_sa[i]:.2f} ± {std_weights_sa[i]:.2f}")
+    
+    # Save the violin plot and weights plot
+    if run_ga and run_pso and run_sa:
+        utils.tracking_error_violin_plot(tracking_error_sa, tracking_error_ga, tracking_error_pso)
+        utils.save_weights_plot(tickers, average_weights_ga, average_weights_sa, average_weights_pso)
 
-    # log the time used for each algorithm
-    logger.info(f"Mean time used for GA: {np.mean(time_used_ga):.2f} seconds")
-    logger.info(f"Mean time used for PSO: {np.mean(time_used_pso):.2f} seconds")
-    logger.info(f"Mean time used for SA: {np.mean(time_used_sa):.2f} seconds")
-    logger.info(f"Standard Deviation time used for SA: {np.std(time_used_sa):.2f} seconds")
-    logger.info(f"Standard Deviation time used for GA: {np.std(time_used_ga):.2f} seconds")
-    logger.info(f"Standard Deviation time used for PSO: {np.std(time_used_pso):.2f} seconds")
-    logger.info(f"Mean tracking error for GA: {np.mean(tracking_error_ga):.2f}%")
-    logger.info(f"Mean tracking error for PSO: {np.mean(tracking_error_pso):.2f}%")
-    logger.info(f"Mean tracking error for SA: {np.mean(tracking_error_sa):.2f}%")
-    logger.info(f"Mean convergence iterations for GA: {np.mean(convergence_iterations_ga):.2f}")
-    logger.info(f"Mean convergence iterations for PSO: {np.mean(convergence_iterations_pso):.2f}")
-    logger.info(f"Mean convergence iterations for SA: {np.mean(convergence_iterations_sa):.2f}")
-    logger.info(f"Standard Deviation convergence iterations for GA: {np.std(convergence_iterations_ga):.2f}")
-    logger.info(f"Standard Deviation convergence iterations for PSO: {np.std(convergence_iterations_pso):.2f}")
-    logger.info(f"Standard Deviation convergence iterations for SA: {np.std(convergence_iterations_sa):.2f}")
     logger.info("All algorithms completed.")
 
     # Close the TensorBoard writer
     writer.close()
+
+    # instructions to run the script
+    print("To view the TensorBoard logs, run the following command in your terminal:")
+    print("tensorboard --logdir=outputs --port=6006")
+    print("Then open your web browser and go to http://localhost:6006/")
+    print("To view the weights plot, check the 'weights_plot.png' file in the current directory.")
+    print("To view the tracking error violin plot, check the 'tracking_error_violin_plot.png' file in the current directory.")
 
 if __name__ == "__main__":
     for _ in range(1):

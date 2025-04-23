@@ -22,29 +22,38 @@ conda activate AIM_cw_env
 pip install -r requirements.txt
 ```
 
-4. Run the Main Script
+4. Enter the desired directory in terminal
 
 ```
 cd path/to/AIM
+```
+
+5. Customise the desired configuration
+
+`config/config.yaml` is the only place where we set all the parameter values.
+
+6. Run the Main Script
+
+```
 python main.py
 ```
 
-Replace `path/to/AIM` to your desired path.
+7. View Tensorboard
 
-5. View Tensorboard
-
-Enter this command in terminal:
+After running main script, insert this command in terminal:
 ```
-tensorboard --logdir "outputs" --port 8000
+tensorboard --logdir "outputs" --port 6006
 ```
-The tensorboard should start on port 6007. Open your browser and navigate to http://localhost:8000/ to access the application.
+The tensorboard should start on port 6006. Open your browser and navigate to http://localhost:6006/ to access the application.
 
-You can expect to see the best fitness plots of wach algorithms.
+You can expect to see the best fitness plots of each algorithms.
 
 ## What output you can expect to see:
 In `./outputs` folder, you can see 
 
-1) the comparison of EF and the overlay plots of respective algorithm's best portfolios. Namely `GA.png`, `SA.png`, `PSO.png`
+1) the comparison of efficient frontier and the overlay plots of respective algorithm's best portfolios. Namely `GA.png`, `SA.png`, `PSO.png`
 
 2) Violin plot of the Tracking Error. Namely `annotated_violin_plot.png`
+
+3) The logging of each algorithm's final results, including weight allocation, sharpe ratio, expected returm, volatility, etc.
 

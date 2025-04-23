@@ -66,94 +66,80 @@ class Particle_Swarm_Optimisation:
             self.overall_best_portfolio_metric = -float('inf')
         self.overall_best_portfolio = None
 
-        convergence_met = False
         iteration = 1
-        while not convergence_met:
-            # Evaluate fitness for each particle.
-            self.set_fitness(metric)
-            # immediately refresh gbest
-            best_idx = self.swarm_df['fitness'].idxmax()
-            self.current_best_weight = self.swarm[best_idx].get_weights().copy()
-
-            # Update velocities and positions.
+        while True:
+            current_best = self.get_best_solution(metric)
+            converged = self.record_iteration(
+                current_best,
+                metric,
+                iteration,
+                convergence_threshold,
+                convergence_window
+            )
+            if converged:
+                break
             self.update_velocity()
             self.update_position()
-
-            # Get the best portfolio from the current iteration.
-            current_best_portfolio = self.get_best_solution(metric)
-
-            # Store the best portfolio's volatility and expected return.
-            self.best_history.append((current_best_portfolio.get_volatility(),
-                    current_best_portfolio.get_expected_return()))
-
-            if metric == 'volatility':
-                current_metric = current_best_portfolio.get_volatility()
-            elif metric == 'return':
-                current_metric = current_best_portfolio.get_expected_return()
-            elif metric == 'sharpe_ratio':
-                current_metric = current_best_portfolio.get_sharpe_ratio()
-            else:
-                raise ValueError("Unsupported metric. Supported metrics are: volatility, return, sharpe_ratio")
-
-            # Store the mean fitness of the swarm.
-            self.swarm_mean.append(self.swarm_df['fitness'].mean())
-
-            # Update overall best if the current metric is better.
-            if self.overall_best_portfolio is None:
-                self.overall_best_portfolio = copy.deepcopy(current_best_portfolio)
-                self.overall_best_portfolio_metric = current_metric
-                self.best_overall_fitness.append(current_metric)
-            else:
-                if (metric == 'volatility' and current_metric < self.overall_best_portfolio_metric) or \
-                (metric != 'volatility' and current_metric > self.overall_best_portfolio_metric):
-                    self.overall_best_portfolio = copy.deepcopy(current_best_portfolio)
-                    self.overall_best_portfolio_metric = current_metric
-                    self.current_best_weight = self.overall_best_portfolio.get_weights().copy()
-                    self.best_overall_fitness.append(current_metric)
-                    print(f"New Overall Best Portfolio Found at Iteration {iteration}!")
-                    print("Weights:", self.overall_best_portfolio.get_weights())
-                    print(f"{metric} =", self.overall_best_portfolio_metric)
-                    print("---------------")
-                else:
-                    self.best_overall_fitness.append(self.best_overall_fitness[-1])
-                # Check convergence: if improvement over the last 'window' iterations is below convergence_threshold.
-            
-            if len(self.best_overall_fitness) >= convergence_window:
-                recent_changes = np.abs(np.diff(self.best_overall_fitness[-convergence_window:]))
-                if np.all(recent_changes < convergence_threshold):
-                    convergence_met = True
             iteration += 1
-        return None
 
-    # def set_fitness(self, metric):
-    #     """
-    #     Evaluate fitness for each particle.
-    #     For 'volatility', lower is better; for 'return' or 'sharpe_ratio', higher is better.
-    #     This function will add a 'fitness' column to the swarm DataFrame.
+    def record_iteration(self, current_best, metric, iteration, convergence_threshold, convergence_window):
+        """
+        Bookkeeping for one PSO iteration:
+         - record best_history and swarm_mean
+         - update overall_best_portfolio & best_overall_fitness
+         - print when a new overall best is found
+         - check convergence over the last `convergence_window` iterations
 
-    #     :param metric: Metric to optimize ('volatility', 'return', 'sharpe_ratio').
-    #     :return: None
-    #     """
-    #     # If the metric is not the allowed metrics, raise an error.
-    #     if metric not in ['volatility','return','sharpe_ratio']:
-    #         raise ValueError("Invalid fitness metric '{metric}', must be one of volatility, return, sharpe_ratio")
-    #     self.swarm_df = Portfolio.evaluate_solution(self.swarm)
-    #     if metric == 'volatility':
-    #         # Lower volatility is better.
-    #         max_vol = self.swarm_df[metric].max()
-    #         self.swarm_df.sort_values(by=metric, inplace=True, ascending=True)
-    #         self.swarm_df['fitness'] = max_vol - self.swarm_df[metric] + 1
-    #     else:
-    #         # For return or sharpe_ratio, higher is better.
-    #         self.swarm_df.sort_values(by=metric, inplace=True, ascending=False)
-    #         self.swarm_df['fitness'] = self.swarm_df[metric]
-        
-    #     # Update personal best fitness if not already set.
-    #     for i in range(self.swarm_size):
-    #         current_fitness = self.swarm_df.iloc[i]['fitness']
-    #         if self.personal_best_fitness[i] is None or current_fitness > self.personal_best_fitness[i]:
-    #             self.personal_best[i] = self.swarm[i].get_weights().copy()
-    #             self.personal_best_fitness[i] = current_fitness
+        Returns True if convergence criterion is met.
+        """
+        # 1. compute the raw metric value for this iteration
+        if metric == 'volatility':
+            current_metric = current_best.get_volatility()
+        elif metric == 'return':
+            current_metric = current_best.get_expected_return()
+        else:  # sharpe_ratio
+            current_metric = current_best.get_sharpe_ratio()
+
+        # 2. record the volatility & return tuple
+        self.best_history.append((
+            current_best.get_volatility(),
+            current_best.get_expected_return()
+        ))
+
+        # 3. record the mean fitness of the swarm
+        self.swarm_mean.append(self.swarm_df['fitness'].mean())
+
+        # 4. update the overall best if improved
+        if self.overall_best_portfolio is None:
+            self.overall_best_portfolio = copy.deepcopy(current_best)
+            self.overall_best_portfolio_metric = current_metric
+            self.best_overall_fitness.append(current_metric)
+        else:
+            improved = (
+                (metric == 'volatility' and current_metric < self.overall_best_portfolio_metric)
+                or
+                (metric != 'volatility' and current_metric > self.overall_best_portfolio_metric)
+            )
+            if improved:
+                self.overall_best_portfolio = copy.deepcopy(current_best)
+                self.overall_best_portfolio_metric = current_metric
+                self.current_best_weight = current_best.get_weights().copy()
+                self.best_overall_fitness.append(current_metric)
+                print(f"New Overall Best Portfolio Found at Iteration {iteration}!")
+                print("Weights:", self.current_best_weight)
+                print(f"{metric} =", self.overall_best_portfolio_metric)
+                print("---------------")
+            else:
+                # repeat last best value
+                self.best_overall_fitness.append(self.best_overall_fitness[-1])
+
+        # 5. check convergence over the window
+        if len(self.best_overall_fitness) >= convergence_window:
+            recent = np.abs(np.diff(self.best_overall_fitness[-convergence_window:]))
+            if np.all(recent < convergence_threshold):
+                return True
+
+        return False
 
     def set_fitness(self, metric):
         """
@@ -230,7 +216,7 @@ class Particle_Swarm_Optimisation:
 
     def get_best_solution(self, metric):
         """
-        Return the best portfolio in the swarm based on the specified metric.
+        Return the best portfolio in the swarm based on the specified metric after setting fitness.
         :param metric: Metric to optimize ('volatility', 'return', 'sharpe_ratio').
         :return: Best portfolio (Portfolio instance).
         """

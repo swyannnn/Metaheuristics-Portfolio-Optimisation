@@ -112,7 +112,7 @@ def main(config):
             start = time.time()
             pso_config = config.get("Particle_Swarm_Optimization", {})
             PSO = Particle_Swarm_Optimisation(monthly_returns, corr_matrix, risk_free_rate, min_weight, pso_config)
-            PSO.run(metric, convergence_threshold, convergence_window)
+            PSO.run(metric, max_iterations, convergence_threshold, convergence_window)
             end = time.time()
 
             best_pso = PSO.overall_best_portfolio
@@ -160,7 +160,7 @@ def main(config):
             start = time.time()
             sa_config = config.get("Simulated_Annealing", {})
             SA = Simulated_Annealing(monthly_returns, corr_matrix, risk_free_rate, min_weight, sa_config)
-            SA.run(metric, convergence_threshold, convergence_window)
+            SA.run(metric, max_iterations, convergence_threshold, convergence_window)
             end = time.time()
 
             best_sa = SA.get_best_solution()

@@ -52,7 +52,7 @@ class Particle_Swarm_Optimisation:
         self.swarm_mean = []
         self.best_history = []
 
-    def run(self, metric, convergence_threshold=1e-6, convergence_window=100):
+    def run(self, metric, max_iterations, convergence_threshold=1e-6, convergence_window=100):
         """
         Run the PSO algorithm for a specified number of iterations.
         :param metric: Metric to optimize ('volatility', 'return', 'sharpe_ratio').
@@ -67,7 +67,7 @@ class Particle_Swarm_Optimisation:
         self.overall_best_portfolio = None
 
         iteration = 1
-        while True:
+        while True or iteration < max_iterations:
             current_best = self.get_best_solution(metric)
             converged = self.record_iteration(
                 current_best,

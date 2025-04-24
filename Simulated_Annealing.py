@@ -17,6 +17,7 @@ class Simulated_Annealing:
         self.risk_free = risk_free 
         self.min_weight = min_weight
         self.initial_temperature = sa_config.get("initial_temperature", 1000)
+        self.stopping_temperature = sa_config.get("stopping_temperature", 1e-6)
         self.temperature = self.initial_temperature
         self.alpha = sa_config.get("alpha", 0.95)
         self.beta = sa_config.get("beta", 0.99)
@@ -70,7 +71,7 @@ class Simulated_Annealing:
         new_solution.set_weights(new_weights)
         return new_solution
 
-    def run(self, metric, convergence_threshold=1e-6, convergence_window=100):
+    def run(self, metric, max_iterations, convergence_threshold=1e-6, convergence_window=100):
         """
         Run the Simulated Annealing algorithm for a given number of iterations,
         stopping early if the performance metric converges.
@@ -80,10 +81,11 @@ class Simulated_Annealing:
         :param window: Number of consecutive iterations to consider for convergence.
         """
         self.iteration = 0
+        self.max_iterations = max_iterations
         # Initialize current solution as the first solution
         # (Assuming self.current_solution is defined elsewhere; otherwise, set it to an initial portfolio)
         convergence_met = False
-        while not convergence_met:
+        while not convergence_met and self.iteration < self.max_iterations:
             # Evaluate current and new solutions
             new_solution = self.perturb_solution(self.current_solution)
             current_obj = Portfolio.evaluate_solution([self.current_solution])
@@ -99,7 +101,7 @@ class Simulated_Annealing:
             self.current_fitness.append(current_metric)
             
             # Compute the change in metric
-            delta = new_metric - current_metric
+            delta = current_metric - new_metric if metric == 'volatility' else new_metric - current_metric
             
             # Acceptance rule: if new solution is better, or accept with a probability if worse.
 
@@ -129,7 +131,11 @@ class Simulated_Annealing:
                 recent_changes = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
                 if np.all(recent_changes < convergence_threshold):
                     convergence_met = True
-            
+
+            # Check if the temperature is below the stopping temperature.
+            # If so, stop the algorithm.
+            if self.temperature < self.stopping_temperature:
+                convergence_met = True
         return None
     
     def get_best_solution(self):
@@ -154,7 +160,7 @@ class Simulated_Annealing:
             # Lundy-Meeson cooling
             return self.temperature / (1 + self.beta * self.temperature)
         else:
-            raise ValueError("Unsupported cooling schedule. Use 'linear', 'geometric' or 'lundy_meeson'.")
+            raise ValueError("Unsupported cooling schedule. Use 'linear', 'geometric' or 'lundy_mees'.")
 
     def get_analysis(self):
         """

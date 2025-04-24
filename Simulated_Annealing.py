@@ -137,12 +137,6 @@ class Simulated_Annealing:
             if self.temperature < self.stopping_temperature:
                 convergence_met = True
         return None
-    
-    def get_best_solution(self):
-        """
-        Return the best solution found during the simulated annealing process.
-        """
-        return self.best_solution
 
     def adjust_temperature(self):
         """
@@ -161,7 +155,7 @@ class Simulated_Annealing:
             return self.temperature / (1 + self.beta * self.temperature)
         else:
             raise ValueError("Unsupported cooling schedule. Use 'linear', 'geometric' or 'lundy_mees'.")
-
+    
     def get_analysis(self):
         """
         Get the analysis of the simulated annealing process.

@@ -163,7 +163,7 @@ def main(config):
             SA.run(metric, max_iterations, convergence_threshold, convergence_window)
             end = time.time()
 
-            best_sa = SA.get_best_solution()
+            best_sa = SA.best_solution
             best_sa_volatility = best_sa.get_volatility()
             best_sa_expected_return = best_sa.get_expected_return()
             best_sa_sharpe_ratio = best_sa.get_sharpe_ratio()

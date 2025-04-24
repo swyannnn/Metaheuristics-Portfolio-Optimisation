@@ -54,7 +54,7 @@ class Simulated_Annealing:
         # Ensure total is large enough to allow both weights to be at least min_weight.
         if total < 2 * self.min_weight:
             # Cannot perturb these weights; return the original solution.
-            return new_solution
+            return solution
         
         # Sample new weight for asset idx1 uniformly from [min_weight, total - min_weight]
         new_weight_i = random.uniform(self.min_weight, total - self.min_weight)

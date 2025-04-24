@@ -45,7 +45,7 @@ class Particle_Swarm_Optimisation:
         # The fitness metric can be changed later by calling set_fitness() with a different metric.
         self.set_fitness(metric='sharpe_ratio')
         self.current_best_index = self.swarm_df['fitness'].idxmax()
-        self.current_best_weight = self.swarm[self.current_best_index].get_weights().copy()
+        self.overall_best_weight = self.swarm[self.current_best_index].get_weights().copy()
 
         # To track evolution over iterations
         self.best_overall_fitness = []
@@ -67,7 +67,7 @@ class Particle_Swarm_Optimisation:
         self.overall_best_portfolio = None
 
         iteration = 1
-        while True or iteration < max_iterations:
+        while iteration < max_iterations:
             current_best = self.get_best_solution(metric)
             converged = self.record_iteration(
                 current_best,
@@ -123,10 +123,10 @@ class Particle_Swarm_Optimisation:
             if improved:
                 self.overall_best_portfolio = copy.deepcopy(current_best)
                 self.overall_best_portfolio_metric = current_metric
-                self.current_best_weight = current_best.get_weights().copy()
+                self.overall_best_weight = current_best.get_weights().copy()
                 self.best_overall_fitness.append(current_metric)
                 print(f"New Overall Best Portfolio Found at Iteration {iteration}!")
-                print("Weights:", self.current_best_weight)
+                print("Weights:", self.overall_best_weight)
                 print(f"{metric} =", self.overall_best_portfolio_metric)
                 print("---------------")
             else:
@@ -195,7 +195,7 @@ class Particle_Swarm_Optimisation:
             r2 = np.random.rand(self.n_assets)
             inertia_component = self.inertia * self.velocities[i]
             cognitive_component = self.cognitive * r1 * (self.personal_best[i] - current_position)
-            social_component = self.social * r2 * (self.current_best_weight - current_position)
+            social_component = self.social * r2 * (self.overall_best_weight - current_position)
             self.velocities[i] = (inertia_component + cognitive_component + social_component)
         return None
 
@@ -230,7 +230,7 @@ class Particle_Swarm_Optimisation:
 
         # Find the best particle based on the metric.
         current_best_idx = self.swarm_df['fitness'].idxmax()
-        self.current_best_weight = self.swarm[current_best_idx].get_weights().copy()
+        self.overall_best_weight = self.swarm[current_best_idx].get_weights().copy()
 
         return self.swarm[current_best_idx]
 

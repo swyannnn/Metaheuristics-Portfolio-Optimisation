@@ -29,7 +29,6 @@ class Simulated_Annealing:
         self.current_temperature = []
         self.overall_best_metric = []
         self.current_fitness = []
-        self.best_history = []
         self.iteration = 0
 
     def perturb_solution(self, solution):
@@ -75,75 +74,77 @@ class Simulated_Annealing:
         """
         Run the Simulated Annealing algorithm for a given number of iterations,
         stopping early if the performance metric converges.
-        c
-        :param metric: The performance metric to optimize ('volatility', 'return', or 'sharpe_ratio').
-        :param convergence_threshold: Convergence threshold for improvement (e.g., 0.001).
-        :param window: Number of consecutive iterations to consider for convergence.
         """
         self.iteration = 0
         self.max_iterations = max_iterations
-        # Initialize current solution as the first solution
-        # (Assuming self.current_solution is defined elsewhere; otherwise, set it to an initial portfolio)
+
+        # --- initialize diagnostics all to iteration 0 ---
+        start_val = Portfolio.evaluate_solution([self.current_solution])[metric].iloc[0]
+        self.best_solution          = self.current_solution
+        self.overall_best_metric    = [start_val]
+        self.current_fitness        = [start_val]
+        self.current_temperature    = [self.temperature]
+
         convergence_met = False
         while not convergence_met and self.iteration < self.max_iterations:
-            # Evaluate current and new solutions
+            # 1) propose neighbor
             new_solution = self.perturb_solution(self.current_solution)
-            current_obj = Portfolio.evaluate_solution([self.current_solution])
-            current_metric = current_obj[metric][0]
-            new_obj = Portfolio.evaluate_solution([new_solution])
-            new_metric = new_obj[metric][0]
 
-            # Store the best portfolio's volatility and expected return.
-            self.best_history.append((new_solution.get_volatility(),
-                    new_solution.get_expected_return()))
+            # 2) evaluate current & new
+            current_val = Portfolio.evaluate_solution([self.current_solution])[metric].iloc[0]
+            new_val     = Portfolio.evaluate_solution([new_solution])[metric].iloc[0]
 
-            # Store the current metric in current_fitness
-            self.current_fitness.append(current_metric)
-            
-            # Compute the change in metric
-            delta = current_metric - new_metric if metric == 'volatility' else new_metric - current_metric
-            
-            # Acceptance rule: if new solution is better, or accept with a probability if worse.
-
-            # If first iteration, initialize best_solution and best metric
-            if self.iteration == 0:
-                self.best_solution = self.current_solution
-                self.overall_best_metric.append(current_metric)
+            # 3) compute delta > 0 when new is better
+            if metric == 'volatility':
+                delta = current_val - new_val
             else:
-                r = np.random.rand()
-                if delta > 0 or r < np.exp(delta / self.temperature):
-                    self.current_solution = new_solution
-                    # Update overall best if new metric is better.
-                    if new_metric > self.overall_best_metric[-1]:
-                        self.best_solution = new_solution
-                        self.overall_best_metric.append(new_metric)
-                    else:
-                        self.overall_best_metric.append(self.overall_best_metric[-1])
-                else:
-                    self.overall_best_metric.append(self.overall_best_metric[-1])
-            
-            # Update temperature and iteration count.
+                delta = new_val - current_val
+
+            # 4) metropolis acceptance
+            if delta > 0 or np.random.rand() < np.exp(delta / self.temperature):
+                self.current_solution = new_solution
+
+            # 5) update global best (correctly handling minimization vs. maximization)
+            last_best = self.overall_best_metric[-1]
+            candidate = Portfolio.evaluate_solution([self.current_solution])[metric].iloc[0]
+            improved = (
+                (metric == 'volatility' and candidate < last_best) or
+                (metric != 'volatility' and candidate > last_best)
+            )
+            if improved:
+                self.best_solution = self.current_solution
+                self.overall_best_metric.append(candidate)
+                print(f"New Overall Best Portfolio Found at Iteration {self.iteration}!")
+                print("Weights:", self.best_solution.get_weights())
+                print(f"{metric} =", candidate)
+                print("---------------")
+            else:
+                self.overall_best_metric.append(last_best)
+
+            # 6) record diagnostics for this iteration
+            self.current_fitness.append(current_val)
+
+            # 7) cool down
             self.adjust_temperature()
+            # append the current temperature to the list for analysis
+            self.current_temperature.append(self.temperature)
+
             self.iteration += 1
 
-            # Check convergence: if improvement over the last 'window' iterations is below convergence_threshold.
+            # 8) convergence checks
             if len(self.overall_best_metric) >= convergence_window:
-                recent_changes = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
-                if np.all(recent_changes < convergence_threshold):
+                recent = np.abs(np.diff(self.overall_best_metric[-convergence_window:]))
+                if np.all(recent < convergence_threshold):
                     convergence_met = True
-
-            # Check if the temperature is below the stopping temperature.
-            # If so, stop the algorithm.
             if self.temperature < self.stopping_temperature:
                 convergence_met = True
+
         return None
 
     def adjust_temperature(self):
         """
         Adjust the temperature based on the cooling schedule.
         """
-        # append the current temperature to the list for analysis
-        self.current_temperature.append(self.temperature)
         if self.schedule == "linear":
             # Linear cooling
             self.temperature = self.temperature - (self.initial_temperature / (self.max_iterations))

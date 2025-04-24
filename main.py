@@ -63,7 +63,7 @@ def main(config):
             start = time.time()
             ga_config = config.get("Genetic_Algorithm", {})
             GA = Genetic_algorithm(monthly_returns, corr_matrix, risk_free_rate, min_weight, ga_config)
-            GA.run(metric, convergence_threshold, convergence_window)
+            GA.run(metric, max_iterations, convergence_threshold, convergence_window)
             end = time.time()
 
             best_ga = GA.overall_best_portfolio

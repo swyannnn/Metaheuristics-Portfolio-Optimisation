@@ -15,7 +15,7 @@ class Genetic_algorithm:
         self.min_weight = min_weight
         self.population_size = ga_config.get("population_size", 10)
         self.selection_method = ga_config.get("selection_method", 'tournament')
-        self.tournament_size = ga_config.get("tournament_size", None)
+        self.tournament_size = ga_config.get("tournament_size", 3)
         self.crossover_method = ga_config.get("crossover_method", 'uniform')
         self.crossover_rate = ga_config.get("crossover_rate", 0.8)
         self.mutation_rate = ga_config.get("mutation_rate", 0.1)
@@ -25,7 +25,7 @@ class Genetic_algorithm:
         self.best_history = []
         return None
     
-    def run(self, metric, convergence_threshold=1e-6, convergence_window=100):
+    def run(self, metric, max_generations, convergence_threshold=1e-6, convergence_window=100):
         """
         Run the genetic algorithm for a specified number of generations.
         Args:
@@ -36,10 +36,11 @@ class Genetic_algorithm:
         self.initialize()
         convergence_met = False
         iteration = 1
-        while not convergence_met:
+        # Loop until either convergence or max_generations is reached
+        while not convergence_met and iteration < max_generations:
             self.set_fitness(metric)
             # Get the best portfolio from the current generation.
-            current_best_portfolio = self.get_best_porfolio(metric)
+            current_best_portfolio = self.get_best_portfolio(metric)
 
             # Store the best portfolio's volatility and expected return.
             self.best_history.append((current_best_portfolio.get_volatility(),
@@ -66,10 +67,10 @@ class Genetic_algorithm:
                    (metric != 'volatility' and current_metric > self.overall_best_metric[-1]):
                     self.overall_best_portfolio = copy.deepcopy(current_best_portfolio)
                     self.overall_best_metric.append(current_metric)
-                    print("Improved current_metric", current_metric)
-                    print(f"New Overall Best Portfolio Found at Generation {iteration+1}!")
-                    print("Weights:", current_best_portfolio.get_weights())
-                    print("---------------")
+                    # print("Improved current_metric", current_metric)
+                    # print(f"New Overall Best Portfolio Found at Generation {iteration+1}!")
+                    # print("Weights:", current_best_portfolio.get_weights())
+                    # print("---------------")
                 else: 
                     # append the previous best
                     self.overall_best_metric.append(self.overall_best_metric[-1])
@@ -92,7 +93,6 @@ class Genetic_algorithm:
         """
         self.population = []
         self.offspring = []
-        self.population_best = []
         self.population_fitness = []
         self.population_mean  = []
         for i in range(self.population_size):
@@ -254,7 +254,7 @@ class Genetic_algorithm:
                 # If no mutation is possible because asset at idx2 is at the minimum weight, skip mutation.
         return None
     
-    def replacement(self, metric, strategy='generational', num_elites=0):
+    def replacement(self, metric, num_elites=0):
         """
         Replace the current population based on the specified strategy.
         
@@ -267,19 +267,16 @@ class Genetic_algorithm:
         For elitism replacement, a specified number of elites are preserved from the parent population,
         and the remaining individuals are randomly selected from the offspring to maintain population size.
         """
-        if strategy == 'generational':
+        if self.replacement_method == 'generational':
             new_population = self.offspring.copy()
-        elif strategy == 'elitism':
+        elif self.replacement_method == 'elitism':
             # Ensure we have a valid number of elites.
             if num_elites < 0 or num_elites > self.population_size:
                 raise ValueError("num_elites must be between 0 and the population size.")
             
             # For elitism, sort parent's population by fitness.
             # For 'volatility', lower is better (ascending); for others, higher is better (descending).
-            if metric == 'volatility':
-                ascending = True
-            else:
-                ascending = False
+            ascending = True if metric == 'volatility' else False
             sorted_parents = self.population_df.sort_values(by=metric, ascending=ascending)
             
             # Randomly select num_elites from the top portion (elites) of the parent population.
@@ -288,7 +285,7 @@ class Genetic_algorithm:
             parent_elites = random.sample(elite_pool, min(num_elites, len(elite_pool)))
             
             # Now, for offspring, sort their fitness similarly.
-            offspring_df = self.evaluate_solution(self.offspring)
+            offspring_df = Portfolio.evaluate_solution(self.offspring)
             sorted_offspring = offspring_df.sort_values(by=metric, ascending=ascending)
             num_offspring_needed = self.population_size - num_elites
             
@@ -315,12 +312,11 @@ class Genetic_algorithm:
         else:
             best_fit = self.population_df.sort_values(by=metric, ascending=False).head(1)[metric].iloc[0]
         # Store the best solution; here we simply append the first one, which is the best (sorted).
-        self.population_best.append(self.population[0])
         self.population_fitness.append(best_fit)
         self.population_mean.append(mean_fit)
         return None
     
-    def get_best_porfolio(self, metric):
+    def get_best_portfolio1(self, metric):
         """
         Get the best portfolio from the population based on the specified metric.
         Args:
@@ -332,6 +328,28 @@ class Genetic_algorithm:
         self.population_df.sort_values(by=metric, inplace=True, ascending=order)
         idx = self.population_df.head(1).index.values[0]
         return self.population[idx]
+    
+    def get_best_portfolio(self, metric):
+        """
+        Get the best portfolio from the population based on the specified metric.
+        Args:
+            metric (str): The objective metric, one of 'volatility', 'return', or 'sharpe_ratio'.
+        Returns:
+            Portfolio: The best portfolio object according to the metric.
+        """
+        if metric == 'volatility':
+            # lower volatility is better
+            best_idx = self.population_df['volatility'].idxmin()
+        elif metric == 'return':
+            # higher return is better
+            best_idx = self.population_df['return'].idxmax()
+        elif metric == 'sharpe_ratio':
+            # higher Sharpe is better
+            best_idx = self.population_df['sharpe_ratio'].idxmax()
+        else:
+            raise ValueError("Unsupported metric. Choose 'volatility', 'return', or 'sharpe_ratio'.")
+        
+        return self.population[best_idx]
 
     def get_analysis(self):
         """

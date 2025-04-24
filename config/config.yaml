@@ -9,8 +9,8 @@ metric: 'sharpe_ratio' # 'sharpe_ratio', 'return', 'volatility'
 
 # Flags to control which algorithms to run
 # Set to True to run the corresponding algorithm, False to skip it
-run_ga: False
-run_sa: True
+run_ga: True
+run_sa: False
 run_pso: False
 runs: 10 # Number of runs for each algorithm
 

@@ -123,7 +123,7 @@ class Simulated_Annealing:
                     self.overall_best_metric.append(self.overall_best_metric[-1])
             
             # Update temperature and iteration count.
-            self.temperature = self.adjust_temperature()
+            self.adjust_temperature()
             self.iteration += 1
 
             # Check convergence: if improvement over the last 'window' iterations is below convergence_threshold.
@@ -146,15 +146,21 @@ class Simulated_Annealing:
         self.current_temperature.append(self.temperature)
         if self.schedule == "linear":
             # Linear cooling
-            return self.temperature - (self.initial_temperature / (self.max_iterations))
+            self.temperature = self.temperature - (self.initial_temperature / (self.max_iterations))
         elif self.schedule == "geometric":
             # Geometric cooling
-            return self.temperature * self.alpha
+            self.temperature = self.temperature * self.alpha
         elif self.schedule == "lundy_mees":
             # Lundy-Meeson cooling
-            return self.temperature / (1 + self.beta * self.temperature)
+            self.temperature = self.temperature / (1 + self.beta * self.temperature)
         else:
             raise ValueError("Unsupported cooling schedule. Use 'linear', 'geometric' or 'lundy_mees'.")
+        
+        # Ensure temperature does not go below zero.
+        # This is important to avoid negative temperatures in the exponential function.
+        # Negative temperatures can lead to undefined behavior in the acceptance probability.
+        if self.temperature < 0:
+            self.temperature = 0
     
     def get_analysis(self):
         """

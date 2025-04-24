@@ -53,6 +53,55 @@ def main(config):
     run_sa = config.get("run_sa", False)
     runs = config.get("runs", 30)
 
+    # # --- Simulated Annealing ---
+    if run_sa:
+        tracking_error_sa = []
+        time_used_sa = []
+        convergence_iterations_sa = []
+        all_best_portfolio_weights_sa = []
+        for i in range(runs):
+            start = time.time()
+            sa_config = config.get("Simulated_Annealing", {})
+            SA = Simulated_Annealing(monthly_returns, corr_matrix, risk_free_rate, min_weight, sa_config)
+            SA.run(metric, max_iterations, convergence_threshold, convergence_window)
+            end = time.time()
+
+            best_sa = SA.best_solution
+            best_sa_volatility = best_sa.get_volatility()
+            best_sa_expected_return = best_sa.get_expected_return()
+            best_sa_sharpe_ratio = best_sa.get_sharpe_ratio()
+            best_sa_weights = best_sa.get_weights()  # e.g., an array of shape (n_assets,)
+            all_best_portfolio_weights_sa.append(best_sa_weights)
+            portfolio_returns = monthly_returns.dot(best_sa_weights)
+            sa_te = utils.calculate_tracking_error(portfolio_returns, benchmark_returns)
+
+            SA_best_history = np.array(SA.best_history)
+            utils.save_benchmark_img(risk_frontier, return_frontier, SA_best_history, best_sa_volatility, best_sa_expected_return, "SA")
+
+            tracking_error_sa.append(sa_te)
+            time_used_sa.append(end - start)
+            convergence_iterations_sa.append(len(SA.best_history))
+
+            # Log SA analysis metrics to TensorBoard
+            try:
+                sa_analysis = SA.get_analysis()
+                for i, row in sa_analysis.iterrows():
+                    writer.add_scalar('Simulated_Annealing/best_fitness', row['best_fitness'], i)
+                    writer.add_scalar('Simulated_Annealing/current_fitness', row['current_fitness'], i)
+                    writer.add_scalar('Simulated_Annealing/temperature', row['temperature'], i)
+            except Exception as e:
+                print("SA get_analysis() not available:", e)
+
+            logger.info("Simulated Annealing Best Portfolio:")
+            logger.info(f"Convergence criteria met at iteration {len(sa_analysis)}")
+            logger.info("Weights: {}".format(best_sa.get_weights()))
+            logger.info("Sharpe Ratio: {}".format(best_sa_sharpe_ratio))
+            logger.info("Expected Return: {:.3f}%".format(best_sa_expected_return))
+            logger.info("Volatility: {:.3f}%".format(best_sa_volatility))
+            logger.info("Tracking Error: {:.3f}%".format(sa_te))
+            logger.info("Execution Time: {:.2f} seconds".format(end - start))
+            logger.info("---------------\n")
+            
     # --- Genetic Algorithm ---
     if run_ga:
         tracking_error_ga = []
@@ -147,55 +196,6 @@ def main(config):
             logger.info("Expected Return: {:.3f}%".format(best_pso_expected_return))
             logger.info("Volatility: {:.3f}%".format(best_pso_volatility))
             logger.info("Tracking Error: {:.3f}%".format(pso_te))
-            logger.info("Execution Time: {:.2f} seconds".format(end - start))
-            logger.info("---------------\n")
-        
-    # # --- Simulated Annealing ---
-    if run_sa:
-        tracking_error_sa = []
-        time_used_sa = []
-        convergence_iterations_sa = []
-        all_best_portfolio_weights_sa = []
-        for i in range(runs):
-            start = time.time()
-            sa_config = config.get("Simulated_Annealing", {})
-            SA = Simulated_Annealing(monthly_returns, corr_matrix, risk_free_rate, min_weight, sa_config)
-            SA.run(metric, max_iterations, convergence_threshold, convergence_window)
-            end = time.time()
-
-            best_sa = SA.best_solution
-            best_sa_volatility = best_sa.get_volatility()
-            best_sa_expected_return = best_sa.get_expected_return()
-            best_sa_sharpe_ratio = best_sa.get_sharpe_ratio()
-            best_sa_weights = best_sa.get_weights()  # e.g., an array of shape (n_assets,)
-            all_best_portfolio_weights_sa.append(best_sa_weights)
-            portfolio_returns = monthly_returns.dot(best_sa_weights)
-            sa_te = utils.calculate_tracking_error(portfolio_returns, benchmark_returns)
-
-            SA_best_history = np.array(SA.best_history)
-            utils.save_benchmark_img(risk_frontier, return_frontier, SA_best_history, best_sa_volatility, best_sa_expected_return, "SA")
-
-            tracking_error_sa.append(sa_te)
-            time_used_sa.append(end - start)
-            convergence_iterations_sa.append(len(SA.best_history))
-
-            # Log SA analysis metrics to TensorBoard
-            try:
-                sa_analysis = SA.get_analysis()
-                for i, row in sa_analysis.iterrows():
-                    writer.add_scalar('Simulated_Annealing/best_fitness', row['best_fitness'], i)
-                    writer.add_scalar('Simulated_Annealing/current_fitness', row['current_fitness'], i)
-                    writer.add_scalar('Simulated_Annealing/temperature', row['temperature'], i)
-            except Exception as e:
-                print("SA get_analysis() not available:", e)
-
-            logger.info("Simulated Annealing Best Portfolio:")
-            logger.info(f"Convergence criteria met at iteration {len(sa_analysis)}")
-            logger.info("Weights: {}".format(best_sa.get_weights()))
-            logger.info("Sharpe Ratio: {}".format(best_sa_sharpe_ratio))
-            logger.info("Expected Return: {:.3f}%".format(best_sa_expected_return))
-            logger.info("Volatility: {:.3f}%".format(best_sa_volatility))
-            logger.info("Tracking Error: {:.3f}%".format(sa_te))
             logger.info("Execution Time: {:.2f} seconds".format(end - start))
             logger.info("---------------\n")
 

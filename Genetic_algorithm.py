@@ -67,11 +67,11 @@ class Genetic_algorithm:
                    (metric != 'volatility' and current_metric > self.overall_best_metric[-1]):
                     self.overall_best_portfolio = copy.deepcopy(current_best_portfolio)
                     self.overall_best_metric.append(current_metric)
-                    # print("Improved current_metric", current_metric)
-                    # print(f"New Overall Best Portfolio Found at Generation {iteration+1}!")
-                    # print("Weights:", current_best_portfolio.get_weights())
-                    # print("---------------")
-                else: 
+                    print("Improved current_metric", current_metric)
+                    print(f"New Overall Best Portfolio Found at Generation {iteration+1}!")
+                    print("Weights:", current_best_portfolio.get_weights())
+                    print("---------------")
+                else:  
                     # append the previous best
                     self.overall_best_metric.append(self.overall_best_metric[-1])
 

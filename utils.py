@@ -152,7 +152,7 @@ def save_benchmark_img(risk_frontier, return_frontier, best_history, overall_bes
     plt.tight_layout()
 
     # Save the figure
-    plt.savefig(f"{save_name}_{len(best_history)}.png", dpi=300)
+    plt.savefig(f"{save_name}.png", dpi=300)
     plt.close()
 
 def calculate_tracking_error(portfolio_returns, benchmark_returns):

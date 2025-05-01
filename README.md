@@ -46,7 +46,7 @@ tensorboard --logdir "outputs" --port 6006
 ```
 The tensorboard should start on port 6006. Open your browser and navigate to http://localhost:6006/ to access the application.
 
-You can expect to see the best fitness plots of each algorithms.
+You can expect to see the *best fitness plots* of each algorithms.
 
 ## What output you can expect to see:
 In `./outputs` folder, you can see 

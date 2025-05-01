@@ -7,13 +7,13 @@ This coursework uses a Conda environment to run the scripts. Follow the steps be
 1. Create a Conda Environment
 
 ```
-conda create -n AIM_cw_env python=3.13
+conda create -n AIM_G009_env python=3.13
 ```
 
 2. Activate the Environment
 
 ```
-conda activate AIM_cw_env
+conda activate AIM_G009_env
 ```
 
 3. Install Dependencies
@@ -25,12 +25,12 @@ pip install -r requirements.txt
 4. Enter the desired directory in terminal
 
 ```
-cd path/to/AIM
+cd path/to/COMP2024-CW-Group009
 ```
 
 5. Customise the desired configuration
 
-`config/config.yaml` is the only place where we set all the parameter values.
+`config/config.yaml` is the only place where we set all the parameter values. You may also use the default parameter settings.
 
 6. Run the Main Script
 

@@ -259,4 +259,3 @@ def save_weights_plot(tickers, ga_avg_weights, pso_avg_weights, sa_avg_weights):
 
     plt.tight_layout()
     plt.savefig("average_asset_weights.png", dpi=300)
-    plt.show()

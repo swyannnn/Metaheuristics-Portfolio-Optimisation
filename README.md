@@ -46,14 +46,19 @@ tensorboard --logdir "outputs" --port 6006
 ```
 The tensorboard should start on port 6006. Open your browser and navigate to http://localhost:6006/ to access the application.
 
-You can expect to see the *best fitness plots* of each algorithms.
+You can expect to see the *best fitness plots* of each algorithms. Sample images shown below:
+| SA best fitness | GA best fitness | PSO best fitness |
+|---|---|---|
+| <img src="readme_img/SA_best_fitness.png" alt="No Poisson noise" width="290"/> | <img src="readme_img/GA_best_fitness.png" alt="With Poisson noise" width="250"/> | <img src="readme_img/PSO_best_fitness.png" alt="With Poisson noise and blur" width="250"/> |
 
 ## What output you can expect to see:
 In `./outputs` folder, you can see 
 
-1) the comparison of efficient frontier and the overlay plots of respective algorithm's best portfolios. Namely `GA.png`, `SA.png`, `PSO.png`
+1) The comparison of efficient frontier and the overlay plots of respective algorithm's best portfolios. Namely `GA.png`, `SA.png`, `PSO.png`
 
 2) Violin plot of the Tracking Error. Namely `annotated_violin_plot.png`
 
-3) The logging of each algorithm's final results, including weight allocation, sharpe ratio, expected returm, volatility, etc.
+3) The final weight allocation to each assets. Namely `average_asset_weights.png` 
+
+4) The logging of each algorithm's final results, including weight allocation, sharpe ratio, expected returm, volatility, etc.
 

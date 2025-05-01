@@ -3,7 +3,7 @@ stock_data_path: "./data/"
 max_iterations: 1000
 convergence_threshold: 1e-6
 convergence_window: 100
-risk_free_rate: 0.8877 # (in percentage, not decimal), got this value by averaging the risk-free rates of the time period 2014.01.01 to 2019.12.31, refer to https://fred.stlouisfed.org/series/DTB3
+risk_free_rate: 0.8877 # (in percentage, not decimal), got this value by averaging the risk-free rates of the time period 2014.01.01 to 2018.12.31, refer to https://fred.stlouisfed.org/series/DTB3
 min_weight: 0.01
 metric: 'sharpe_ratio' # 'sharpe_ratio', 'return', 'volatility'
 
@@ -23,9 +23,9 @@ Simulated_Annealing:
 
 Particle_Swarm_Optimization:
   num_particles: 10
-  inertia: 0.65
-  cognitive: 2.5
-  social: 2.5
+  inertia: 0.729
+  cognitive: 1.49445
+  social: 1.49445
 
 Genetic_Algorithm:
   population_size: 10
